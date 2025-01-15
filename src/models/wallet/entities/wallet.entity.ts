@@ -1,16 +1,9 @@
 import { BaseClassEntity } from 'src/common/entities/base.extend-entity';
 import { User } from 'src/models/user/entities/user.entity';
-import {
-  Entity,
-  Column,
-  OneToOne,
-  JoinColumn,
-} from 'typeorm';
+import { Entity, Column, OneToOne, JoinColumn } from 'typeorm';
 
 @Entity()
 export class Wallet extends BaseClassEntity {
-
-
   @OneToOne(() => User, (user) => user.wallet, { onDelete: 'CASCADE' })
   @JoinColumn()
   user: User;
@@ -18,4 +11,6 @@ export class Wallet extends BaseClassEntity {
   @Column({ type: 'float', default: 0 })
   balance: number;
 
+  @Column({ type: 'float', default: 0 })
+  creditDue: number;
 }

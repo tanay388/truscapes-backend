@@ -14,6 +14,7 @@ import {
 import { Exclude } from 'class-transformer';
 import { NotificationToken } from 'src/providers/notification/entities/notificationToken.entity';
 import { Wallet } from 'src/models/wallet/entities/wallet.entity';
+import { Transaction } from 'src/models/transactions/entities/transaction.entity';
 
 export enum UserRole {
   CONTRACTOR = 'CONTRACTOR',
@@ -100,9 +101,15 @@ export class User extends BaseEntity {
   @OneToMany(() => NotificationToken, (nt) => nt.user, { onDelete: 'CASCADE' })
   notificationTokens: NotificationToken[];
 
-  @OneToOne(() => Wallet, (wallet) => wallet.user, { cascade: true })
+  @OneToOne(() => Wallet, (wallet) => wallet.user, {
+    cascade: true,
+    eager: true,
+  })
   @JoinColumn()
   wallet: Wallet;
+
+  @OneToMany(() => Transaction, (t) => t.user, { cascade: true, eager: true })
+  transactions: Transaction[];
 
   toReturnJson() {
     const { id, name, email, phone, photo, role, birthDate } = this;
