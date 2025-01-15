@@ -4,6 +4,7 @@ import { User } from './entities/user.entity';
 import { FirebaseUser } from '../../providers/firebase/firebase.service';
 import { UploaderService } from '../../providers/uploader/uploader.service';
 import { NotificationService } from 'src/providers/notification/notification.service';
+import { Pagination } from 'src/common/dtos/pagination.dto';
 
 @Injectable()
 export class UserService {
@@ -31,10 +32,38 @@ export class UserService {
     return user;
   }
 
+  async getUsers(pagination: Pagination) {
+    const users = await User.find({
+      take: pagination.take,
+      skip: pagination.skip,
+      order: {
+        createdAt: 'DESC',
+      },
+    });
+
+    return users;
+  }
+
+  async approveSingleUser(userId: string, adminId: string) {
+    const user = await User.findOne({ where: { id: userId } });
+    user.approved = true;
+    await user.save();
+
+    return user;
+  }
+
+  async blockSingleUser(userId: string, adminId: string) {
+    const user = await User.findOne({ where: { id: userId } });
+    user.approved = false;
+    await user.save();
+
+    return user;
+  }
+
   async getProfileById(uid: string) {
     const user = await User.findOne({
       where: { id: uid },
-      relations: ['owen', 'worksIn'],
+      // relations: ['owen', 'worksIn'],
     });
     return user;
   }

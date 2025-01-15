@@ -17,8 +17,15 @@ import { FirebaseUser } from '../../providers/firebase/firebase.service';
 import { FUser } from './decorator/firebase.user.decorator';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { ApiBearerAuth, ApiBody, ApiConsumes, ApiOperation, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiBody,
+  ApiConsumes,
+  ApiOperation,
+  ApiTags,
+} from '@nestjs/swagger';
 import { Gender } from './entities/user.entity';
+import { Pagination } from 'src/common/dtos/pagination.dto';
 
 @FirebaseSecure()
 @ApiTags('User Controller')
@@ -35,6 +42,21 @@ export class UserController {
     @Headers('notification-token') token: string | undefined,
   ) {
     return this.userService.getProfile(user, token);
+  }
+
+  @Get('users')
+  getUsers(@Query() pagination: Pagination) {
+    return this.userService.getUsers(pagination);
+  }
+
+  @Post('users/:id/approve')
+  approveSingleUser(@Param('id') id: string, @FUser() user: FirebaseUser) {
+    return this.userService.approveSingleUser(id, user.uid);
+  }
+
+  @Post('users/:id/block')
+  blockSingleUser(@Param('id') id: string, @FUser() user: FirebaseUser) {
+    return this.userService.blockSingleUser(id, user.uid);
   }
 
   @Get(':id')

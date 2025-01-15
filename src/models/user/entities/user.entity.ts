@@ -8,13 +8,19 @@ import {
   UpdateDateColumn,
   DeleteDateColumn,
   OneToMany,
+  OneToOne,
+  JoinColumn,
 } from 'typeorm';
 import { Exclude } from 'class-transformer';
 import { NotificationToken } from 'src/providers/notification/entities/notificationToken.entity';
+import { Wallet } from 'src/models/wallet/entities/wallet.entity';
 
 export enum UserRole {
-  user = 'user',
-  admin = 'admin',
+  CONTRACTOR = 'CONTRACTOR',
+  DEALER = 'DEALER',
+  DISTRIBUTOR = 'DISTRIBUTOR',
+  ADMIN = 'ADMIN',
+  USER = 'USER',
 }
 
 export enum Gender {
@@ -56,11 +62,25 @@ export class User extends BaseEntity {
   email: string;
 
   @Column({ nullable: true })
-  birthDate: Date;
+  approved: boolean;
 
-  @Exclude()
   @Column({ nullable: true })
-  stripeId?: string;
+  country: string;
+
+  @Column({ nullable: true })
+  city: string;
+
+  @Column({ nullable: true })
+  company: string;
+
+  @Column({ nullable: true })
+  companyWebsite: string;
+
+  @Column({ nullable: true })
+  companyAddress: string;
+
+  @Column({ nullable: true })
+  birthDate: Date;
 
   @Column({
     type: 'enum',
@@ -79,6 +99,10 @@ export class User extends BaseEntity {
 
   @OneToMany(() => NotificationToken, (nt) => nt.user, { onDelete: 'CASCADE' })
   notificationTokens: NotificationToken[];
+
+  @OneToOne(() => Wallet, (wallet) => wallet.user, { cascade: true })
+  @JoinColumn()
+  wallet: Wallet;
 
   toReturnJson() {
     const { id, name, email, phone, photo, role, birthDate } = this;

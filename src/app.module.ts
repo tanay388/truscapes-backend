@@ -12,6 +12,10 @@ import { AppCacheModule } from './providers/cache/app.cache.module';
 import { UserModule } from './models/user/user.module';
 import { NotificationModule } from './providers/notification/notification.module';
 import { FirebaseUserMiddlewareExtractor } from './models/user/middleware/firebaseUserMiddlewareExtractor';
+import { ProductsModule } from './models/products/products.module';
+import { CategoryModule } from './models/category/category.module';
+import { GalleryModule } from './models/gallery/gallery.module';
+import { WalletModule } from './models/wallet/wallet.module';
 
 @Module({
   imports: [
@@ -33,6 +37,10 @@ import { FirebaseUserMiddlewareExtractor } from './models/user/middleware/fireba
     AppCacheModule,
     NotificationModule,
     UserModule,
+    ProductsModule,
+    CategoryModule,
+    GalleryModule,
+    WalletModule,
   ],
   controllers: [AppController],
   providers: [AppService],
