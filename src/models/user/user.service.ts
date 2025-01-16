@@ -92,7 +92,17 @@ export class UserService {
 
   async updateProfile(
     fUser: FirebaseUser,
-    { name, gender, birthDate, phone }: UpdateUserDto,
+    {
+      name,
+      gender,
+      birthDate,
+      phone,
+      country,
+      city,
+      company,
+      companyAddress,
+      companyWebsite,
+    }: UpdateUserDto,
     photo?: Express.Multer.File,
   ) {
     const { uid, email } = fUser;
@@ -109,6 +119,11 @@ export class UserService {
       birthDate,
       email,
       phone,
+      company,
+      city,
+      country,
+      companyAddress,
+      companyWebsite,
     });
 
     return this.getProfile(fUser);
