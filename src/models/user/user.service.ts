@@ -5,6 +5,7 @@ import { FirebaseUser } from '../../providers/firebase/firebase.service';
 import { UploaderService } from '../../providers/uploader/uploader.service';
 import { NotificationService } from 'src/providers/notification/notification.service';
 import { Pagination } from 'src/common/dtos/pagination.dto';
+import { Wallet } from '../wallet/entities/wallet.entity';
 
 @Injectable()
 export class UserService {
@@ -75,6 +76,10 @@ export class UserService {
       email,
       phone: phone_number,
       photo: picture,
+    });
+
+    await Wallet.save({
+      user: { id: uid },
     });
 
     return this.getProfile(fUser);

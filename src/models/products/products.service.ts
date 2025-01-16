@@ -11,6 +11,7 @@ import { UpdateProductVariantDto } from './dto/update-product-variant.dto';
 @Injectable()
 export class ProductsService {
   async create(createProductDto: CreateProductDto) {
+    // createProductDto.state = ProductStatus.ACTIVE;
     const product = await Product.save({
       ...createProductDto,
       category: { id: createProductDto.categoryId },
@@ -87,10 +88,15 @@ export class ProductsService {
       images: updateProductDto.images,
       categoryIndex: updateProductDto.categoryIndex,
       index: updateProductDto.index,
+      state: updateProductDto.state,
       category: { id: updateProductDto.categoryId },
     });
 
-    return updatedProduct;
+    if (!updatedProduct.affected) {
+      return new NotFoundException(`Product with ID ${id} not found`);
+    }
+
+    return await Product.findOneBy({ id });
   }
 
   async remove(id: number) {

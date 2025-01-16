@@ -22,8 +22,8 @@ export class WalletController {
     return this.walletService.findOne(+id);
   }
 
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateWalletDto: UpdateWalletDto) {
+  @Patch(':userId')
+  update(@Param('userId') id: string, @Body() updateWalletDto: UpdateWalletDto) {
     return this.walletService.update(+id, updateWalletDto);
   }
 
