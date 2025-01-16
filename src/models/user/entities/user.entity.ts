@@ -93,7 +93,7 @@ export class User extends BaseEntity {
   @Exclude()
   @Column({
     type: 'enum',
-    enum: ['user', 'admin'],
+    enum: UserRole,
     default: 'user',
   })
   role: UserRole;
