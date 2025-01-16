@@ -72,15 +72,18 @@ export class UserService {
   async createUserProfile(fUser: FirebaseUser) {
     const { uid, email, phone_number, picture } = fUser;
 
-    const wallet = await Wallet.save({
-      user: { id: uid },
-    });
-
     await User.save({
       id: uid,
       email,
       phone: phone_number,
       photo: picture,
+    });
+
+    const wallet = await Wallet.save({
+      user: { id: uid },
+    });
+
+    await User.update(uid, {
       wallet: { id: wallet.id },
     });
 
