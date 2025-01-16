@@ -21,7 +21,7 @@ export enum UserRole {
   DEALER = 'DEALER',
   DISTRIBUTOR = 'DISTRIBUTOR',
   ADMIN = 'ADMIN',
-  USER = 'USER',
+  USER = 'user',
 }
 
 export enum Gender {
@@ -94,7 +94,7 @@ export class User extends BaseEntity {
   @Column({
     type: 'enum',
     enum: UserRole,
-    default: 'USER',
+    default: 'user',
   })
   role: UserRole;
 
