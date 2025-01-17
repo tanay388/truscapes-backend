@@ -1,15 +1,12 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { CreateTransactionDto } from './dto/create-transaction.dto';
 import { UpdateTransactionDto } from './dto/update-transaction.dto';
 import { Transaction, TransactionType } from './entities/transaction.entity';
 import { User } from '../user/entities/user.entity';
+import { Pagination } from 'src/common/dtos/pagination.dto';
 
 @Injectable()
 export class TransactionsService {
-  create(createTransactionDto: CreateTransactionDto) {
-    return 'This action adds a new transaction';
-  }
-
   async addTransaction(
     type: TransactionType,
     amount: number,
@@ -31,30 +28,39 @@ export class TransactionsService {
     return transaction.save();
   }
 
-  findAll() {
-    return `This action returns all transactions`;
-  }
+  async findAll(pagination: Pagination) {
+    const { take = 10, skip = 0 } = pagination;
 
-  findOne(userId: string) {
-    const transactions = Transaction.find({
-      where: {
-        user: {
-          id: userId,
-        },
-      },
+    return await Transaction.find({
+      relations: ['user'],
+      take,
+      skip,
       order: {
         createdAt: 'DESC',
       },
     });
-
-    return transactions;
   }
 
-  update(id: number, updateTransactionDto: UpdateTransactionDto) {
-    return `This action updates a #${id} transaction`;
-  }
+  async findUserTransactions(userId: string, pagination: Pagination) {
+    const { take = 10, skip = 0 } = pagination;
 
-  remove(id: number) {
-    return `This action removes a #${id} transaction`;
+    const user = await User.findOne({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    return await Transaction.find({
+      where: {
+        user: { id: userId },
+      },
+      take,
+      skip,
+      order: {
+        createdAt: 'DESC',
+      },
+    });
   }
 }
