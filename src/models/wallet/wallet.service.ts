@@ -104,7 +104,7 @@ export class WalletService {
     if (payment.requiresAction) {
       return {
         success: true,
-        paymentUrl: payment.paymentUrl + '&gateway=' + gateway,
+        paymentUrl: payment.paymentUrl,
         message: 'Please complete the payment using the provided URL',
       };
     }

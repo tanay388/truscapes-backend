@@ -99,9 +99,11 @@ export class PaymentGatewayService {
         },
         mode: 'payment',
         success_url:
-          'https://localhost:3000/success?session_id={CHECKOUT_SESSION_ID}',
+          'https://localhost:3000/success?session_id={CHECKOUT_SESSION_ID}&gateway=' +
+          PaymentGateway.STRIPE,
         cancel_url:
-          'https://localhost:3000/cancel?session_id={CHECKOUT_SESSION_ID}',
+          'https://localhost:3000/cancel?session_id={CHECKOUT_SESSION_ID}&gateway=' +
+          PaymentGateway.STRIPE,
       });
 
       return {
