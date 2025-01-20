@@ -87,7 +87,7 @@ export class PaymentGatewayService {
           },
         ],
         currency: 'usd',
-        payment_method_types: ['card', 'paypal'],
+        payment_method_types: ['card'],
         metadata: {
           userId,
           type: type,
