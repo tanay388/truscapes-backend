@@ -1,9 +1,14 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  NotFoundException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PaymentGateway } from '../dto/repay-dues.dto';
 import Stripe from 'stripe';
 import * as paypal from '@paypal/checkout-server-sdk';
 import { ApiContracts, ApiControllers, Constants } from 'authorizenet';
+import { Wallet } from '../entities/wallet.entity';
 
 interface PaymentResponse {
   success: boolean;
@@ -42,12 +47,12 @@ export class PaymentGatewayService {
     amount: number,
     paymentData: any,
     userId: string,
-    type?: string,
+    data?: any,
   ): Promise<PaymentResponse> {
     try {
       switch (gateway) {
         case PaymentGateway.STRIPE:
-          return await this.createStripePaymentIntent(amount, userId, type);
+          return await this.createStripePaymentIntent(amount, userId, data);
         case PaymentGateway.PAYPAL:
           return await this.createPaypalOrder(amount, userId);
         case PaymentGateway.AUTHORIZE_NET:
@@ -70,7 +75,7 @@ export class PaymentGatewayService {
   private async createStripePaymentIntent(
     amount: number,
     userId: string,
-    type?: string,
+    data?: any,
   ): Promise<PaymentResponse> {
     try {
       const paymentIntent = await this.stripe.checkout.sessions.create({
@@ -90,13 +95,13 @@ export class PaymentGatewayService {
         payment_method_types: ['card'],
         metadata: {
           userId,
-          type: type,
+          ...data,
         },
         mode: 'payment',
         success_url:
-          'https://localhost:3000/success?session_id={CHECKOUT_SESSION_ID}&type={type}',
+          'https://localhost:3000/success?session_id={CHECKOUT_SESSION_ID}',
         cancel_url:
-          'https://localhost:3000/cancel?session_id={CHECKOUT_SESSION_ID}&type={type}',
+          'https://localhost:3000/cancel?session_id={CHECKOUT_SESSION_ID}',
       });
 
       return {
@@ -227,6 +232,31 @@ export class PaymentGatewayService {
       throw new BadRequestException(
         error.message || 'Authorize.NET payment processing failed',
       );
+    }
+  }
+
+  async confirmPaymentResponse(sessionId: string, paymentGateway: string) {
+    // try {
+    if (paymentGateway === PaymentGateway.STRIPE) {
+      const session = await this.stripe.checkout.sessions.retrieve(sessionId);
+      if (session.payment_status === 'paid') {
+        if (session.metadata.type === 'repay-dues') {
+          const userId = session.metadata.userId;
+          const wallet = await Wallet.findOne({
+            where: { user: { id: userId } },
+          });
+          if (!wallet) {
+            throw new NotFoundException('Wallet not found');
+          }
+          wallet.creditDue = 0;
+          await wallet.save();
+        }
+        return {
+          success: true,
+          requiresAction: false,
+        };
+      }
+    } else if (paymentGateway === PaymentGateway.PAYPAL) {
     }
   }
 }

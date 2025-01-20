@@ -55,4 +55,12 @@ export class WalletController {
   findOne(@Param('userId') userId: string) {
     return this.walletService.findOne(userId);
   }
+
+  @Patch('verify-payment/:transactionId/:paymentGateway')
+  verifyPayment(
+    @Param('transactionId') transactionId: string,
+    @Param('paymentGateway') paymentGateway: string,
+  ) {
+    return this.walletService.verifyPayment(transactionId, paymentGateway);
+  }
 }

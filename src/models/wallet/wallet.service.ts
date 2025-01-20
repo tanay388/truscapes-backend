@@ -1,11 +1,18 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { CreateWalletDto } from './dto/create-wallet.dto';
 import { UpdateWalletDto } from './dto/update-wallet.dto';
 import { CreditWalletDto } from './dto/credit-wallet.dto';
 import { RepayDuesDto, PaymentGateway } from './dto/repay-dues.dto';
 import { Wallet } from './entities/wallet.entity';
 import { TransactionsService } from '../transactions/transactions.service';
-import { TransactionType, PaymentMethod } from '../transactions/entities/transaction.entity';
+import {
+  TransactionType,
+  PaymentMethod,
+} from '../transactions/entities/transaction.entity';
 import { User } from '../user/entities/user.entity';
 import { PaymentGatewayService } from './services/payment-gateway.service';
 
@@ -19,8 +26,8 @@ export class WalletService {
   async findOne(userId: string) {
     const wallet = await Wallet.findOne({
       where: {
-        user: { id: userId }
-      }
+        user: { id: userId },
+      },
     });
 
     if (!wallet) {
@@ -30,7 +37,11 @@ export class WalletService {
     return wallet;
   }
 
-  async creditWallet(userId: string, creditWalletDto: CreditWalletDto, adminId: string) {
+  async creditWallet(
+    userId: string,
+    creditWalletDto: CreditWalletDto,
+    adminId: string,
+  ) {
     const admin = await User.findOne({ where: { id: adminId } });
     if (!admin) {
       throw new NotFoundException('Admin user not found');
@@ -52,19 +63,21 @@ export class WalletService {
     await this.transactionsService.addTransaction(
       TransactionType.CREDIT_ADDED,
       amount,
-      description || `Credit added by admin: ${admin.name || admin.email}. Amount due: ${amount}`,
+      description ||
+        `Credit added by admin: ${admin.name || admin.email}. Amount due: ${amount}`,
       userId,
     );
 
     return {
       ...wallet,
-      message: `Credit of ${amount} added successfully. This amount needs to be paid back. Total credit due: ${wallet.creditDue}`
+      message: `Credit of ${amount} added successfully. This amount needs to be paid back. Total credit due: ${wallet.creditDue}`,
     };
   }
 
   async repayDues(userId: string, repayDuesDto: RepayDuesDto) {
     const wallet = await this.findOne(userId);
-    const { amount, gateway, paymentToken, cardInfo, description } = repayDuesDto;
+    const { amount, gateway, paymentToken, cardInfo, description } =
+      repayDuesDto;
 
     if (amount <= 0) {
       throw new BadRequestException('Payment amount must be greater than 0');
@@ -75,19 +88,23 @@ export class WalletService {
     }
 
     // Process payment through the selected gateway
-    const paymentData = gateway === PaymentGateway.AUTHORIZE_NET ? cardInfo : paymentToken;
+    const paymentData =
+      gateway === PaymentGateway.AUTHORIZE_NET ? cardInfo : paymentToken;
     const payment = await this.paymentGatewayService.processPayment(
       gateway,
       amount,
       paymentData,
       userId,
+      {
+        type: 'repay-dues',
+      },
     );
 
     // For PayPal and Stripe, return the payment URL
     if (payment.requiresAction) {
       return {
         success: true,
-        paymentUrl: payment.paymentUrl,
+        paymentUrl: payment.paymentUrl + '&gateway=' + gateway,
         message: 'Please complete the payment using the provided URL',
       };
     }
@@ -114,5 +131,12 @@ export class WalletService {
     }
 
     throw new BadRequestException('Payment processing failed');
+  }
+
+  async verifyPayment(sessionId: string, paymentGateway: string) {
+    return await this.paymentGatewayService.confirmPaymentResponse(
+      sessionId,
+      paymentGateway,
+    );
   }
 }
