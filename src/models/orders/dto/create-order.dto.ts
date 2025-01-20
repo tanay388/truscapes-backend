@@ -1,10 +1,11 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import { 
   IsArray, 
   IsNotEmpty, 
   IsNumber, 
   IsObject, 
+  IsOptional, 
   IsString, 
   ValidateNested 
 } from 'class-validator';
@@ -21,6 +22,23 @@ class OrderItemDto {
   @ApiProperty({ description: 'Quantity of the product' })
   @IsNumber()
   quantity: number;
+}
+
+class CardInfo {
+  @ApiProperty()
+  @IsString()
+  @IsNotEmpty()
+  cardNumber: string;
+
+  @ApiProperty()
+  @IsString()
+  @IsNotEmpty()
+  expirationDate: string;
+
+  @ApiProperty()
+  @IsString()
+  @IsNotEmpty()
+  cvv: string;
 }
 
 class ShippingAddressDto {
@@ -68,7 +86,15 @@ export class CreateOrderDto {
   @Type(() => ShippingAddressDto)
   shippingAddress: ShippingAddressDto;
 
-  @ApiProperty({ required: false })
+  @ApiPropertyOptional({ required: false })
+  @IsOptional()
   @IsString()
   notes?: string;
+
+  @ApiPropertyOptional({ type: CardInfo, required: false })
+  @IsOptional()
+  @IsObject()
+  @ValidateNested({ each: true })
+  @Type(() => CardInfo)
+  cardInfo?: CardInfo;
 }

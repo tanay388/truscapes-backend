@@ -5,7 +5,7 @@ import { Order, OrderStatus, PaymentStatus } from './entities/order.entity';
 import { OrderItem } from './entities/order-item.entity';
 import { Product } from '../products/entities/product.entity';
 import { ProductVariant } from '../products/entities/product-variant.entity';
-import { User } from '../user/entities/user.entity';
+import { User, UserRole } from '../user/entities/user.entity';
 import { Pagination } from 'src/common/dtos/pagination.dto';
 import { PaymentGatewayService } from '../wallet/services/payment-gateway.service';
 import { PaymentGateway } from '../wallet/dto/repay-dues.dto';
@@ -17,6 +17,19 @@ export class OrdersService {
     private readonly paymentGatewayService: PaymentGatewayService,
     private readonly notificationService: NotificationService,
   ) {}
+
+  getRoleBasedPrice(product: Product, variant: ProductVariant, user: User) {
+    switch (user.role) {
+      case UserRole.DEALER:
+        return variant.dealerPrice;
+      case UserRole.DISTRIBUTOR:
+        return variant.distributorPrice;
+      case UserRole.CONTRACTOR:
+        return variant.contractorPrice;
+      default:
+        return variant.price || product.basePrice;
+    }
+  }
 
   async create(createOrderDto: CreateOrderDto, userId: string) {
     const user = await User.findOne({ where: { id: userId } });
@@ -33,6 +46,7 @@ export class OrdersService {
     // Calculate totals
     let subtotal = 0;
     const orderItems: OrderItem[] = [];
+    let shippingCostValue = 0;
 
     // Process each order item
     for (const item of createOrderDto.items) {
@@ -52,9 +66,11 @@ export class OrdersService {
           throw new NotFoundException(`Product variant with ID ${item.variantId} not found`);
         }
       }
-
-      const price = variant ? variant.price : product.basePrice;
+      
+      const price = this.getRoleBasedPrice(product, variant, user);
       const total = price * item.quantity;
+
+      shippingCostValue = shippingCostValue + product.shippingCost;
 
       const orderItem = new OrderItem();
       orderItem.product = product;
@@ -68,7 +84,7 @@ export class OrdersService {
     }
 
     // Calculate shipping cost (you can implement your own logic)
-    const shippingCost = 10; // Default shipping cost
+    const shippingCost = shippingCostValue; // Default shipping cost
 
     order.items = orderItems;
     order.subtotal = subtotal;

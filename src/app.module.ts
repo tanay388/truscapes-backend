@@ -17,6 +17,7 @@ import { CategoryModule } from './models/category/category.module';
 import { GalleryModule } from './models/gallery/gallery.module';
 import { WalletModule } from './models/wallet/wallet.module';
 import { TransactionsModule } from './models/transactions/transactions.module';
+import { OrdersModule } from './models/orders/orders.module';
 
 @Module({
   imports: [
@@ -43,6 +44,7 @@ import { TransactionsModule } from './models/transactions/transactions.module';
     GalleryModule,
     WalletModule,
     TransactionsModule,
+    OrdersModule,
   ],
   controllers: [AppController],
   providers: [AppService],

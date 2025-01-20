@@ -19,7 +19,7 @@ export class PaymentGatewayService {
 
   constructor(private configService: ConfigService) {
     // Initialize Stripe
-    this.stripe = new Stripe(this.configService.get('STRIPE_SECRET_KEY'), {
+    this.stripe = new Stripe(process.env.STRIPE_SECRET, {
       apiVersion: '2023-10-16',
     });
 
