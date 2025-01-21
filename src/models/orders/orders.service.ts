@@ -80,6 +80,7 @@ export class OrdersService {
       }
 
       const price = this.getRoleBasedPrice(product, variant, user);
+      console.log('userPrice' + ' ' + product.basePrice);
       const total = price * item.quantity;
 
       shippingCostValue = shippingCostValue + product.shippingCost;
@@ -109,6 +110,7 @@ export class OrdersService {
 
     if (createOrderDto.gateway === PaymentGateway.WALLET) {
       if (user.wallet.balance < order.total) {
+        console.log(user.wallet.balance, order.total);
         throw new BadRequestException('Insufficient wallet balance');
       }
 
