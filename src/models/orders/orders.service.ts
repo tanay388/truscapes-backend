@@ -81,7 +81,8 @@ export class OrdersService {
 
       const price = this.getRoleBasedPrice(product, variant, user);
       console.log('userPrice' + ' ' + price);
-      const total = price * item.quantity;
+      const total =
+        parseFloat(price.toFixed(2)) * parseFloat(item.quantity.toFixed(2));
 
       shippingCostValue = shippingCostValue + product.shippingCost;
 
@@ -108,7 +109,8 @@ export class OrdersService {
     order.items = orderItems;
     order.subtotal = subtotal;
     order.shippingCost = shippingCost;
-    order.total = subtotal + shippingCost;
+    order.total =
+      parseFloat(subtotal.toFixed(2)) + parseFloat(shippingCost.toFixed(2)); // Add shippingCost;
     order.status = OrderStatus.PAYMENT_PENDING;
     order.paymentStatus = PaymentStatus.PENDING;
 
