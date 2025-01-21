@@ -1,0 +1,331 @@
+import { Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import * as nodemailer from 'nodemailer';
+
+interface EmailOptions {
+  to: string | string[];
+  cc?: string | string[];
+  subject: string;
+  html: string;
+}
+
+@Injectable()
+export class EmailService {
+  private transporter: nodemailer.Transporter;
+  private readonly emailStyles = `
+    <style>
+      .email-container {
+        font-family: 'Arial', sans-serif;
+        max-width: 600px;
+        margin: 0 auto;
+        padding: 20px;
+        background-color: #ffffff;
+      }
+      .header {
+        text-align: center;
+        margin-bottom: 30px;
+      }
+      .logo {
+        max-width: 200px;
+        margin-bottom: 20px;
+      }
+      h1 {
+        color: #333333;
+        font-size: 24px;
+        margin-bottom: 20px;
+      }
+      p {
+        color: #666666;
+        font-size: 16px;
+        line-height: 1.6;
+        margin-bottom: 15px;
+      }
+      .button {
+        display: inline-block;
+        background-color: #4CAF50;
+        color: #ffffff;
+        padding: 12px 24px;
+        text-decoration: none;
+        border-radius: 4px;
+        margin: 20px 0;
+      }
+      .details {
+        background-color: #f9f9f9;
+        padding: 15px;
+        border-radius: 4px;
+        margin: 20px 0;
+      }
+      .footer {
+        text-align: center;
+        margin-top: 30px;
+        padding-top: 20px;
+        border-top: 1px solid #eeeeee;
+        color: #999999;
+        font-size: 14px;
+      }
+    </style>
+  `;
+
+  constructor(private configService: ConfigService) {
+    this.transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: this.configService.get<string>('SMTP_USER'),
+        pass: this.configService.get<string>('SMTP_PASSWORD'),
+      },
+    });
+  }
+
+  private wrapInTemplate(content: string): string {
+    return `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          ${this.emailStyles}
+        </head>
+        <body>
+          <div class="email-container">
+            <div class="header">
+              <img src="https://tru-scapes.com/logo.png" alt="Tru-Scapes Logo" class="logo">
+            </div>
+            ${content}
+            <div class="footer">
+              <p>© ${new Date().getFullYear()} Tru-Scapes®. All rights reserved.</p>
+            </div>
+          </div>
+        </body>
+      </html>
+    `;
+  }
+
+  async sendEmail({ to, cc, subject, html }: EmailOptions) {
+    try {
+      const mailOptions: nodemailer.SendMailOptions = {
+        from: this.configService.get<string>('SMTP_USER'),
+        to,
+        cc,
+        subject,
+        html: this.wrapInTemplate(html),
+      };
+
+      const info = await this.transporter.sendMail(mailOptions);
+      return info;
+    } catch (error) {
+      console.error('Error sending email:', error);
+      throw error;
+    }
+  }
+
+  // Account Creation Emails
+  async sendAccountPendingEmail(to: string, customerName: string) {
+    return this.sendEmail({
+      to,
+      subject: 'Your Tru-Scapes® Account Has Been Created—Just One More Step!',
+      html: `
+        <p>Hello ${customerName},</p>
+        <p>Thanks for signing up with Tru-Scapes®! We're excited to have you onboard. Your new account has been successfully created. Before you can begin using the account, our team needs to review and approve it. This typically takes 24-48 hours.</p>
+        <div class="details">
+          <h2>What to expect next:</h2>
+          <p>Review & Approval: Our team will review your registration to ensure the best experience.</p>
+          <p>Confirmation Email: Once approved, we'll send you another email letting you know that your account is fully active.</p>
+        </div>
+        <p>In the meantime, feel free to explore our website and check out our services. If you have any questions, just hit reply, and we'll be happy to help.</p>
+        <p>Thank you for choosing Tru-Scapes!</p>
+        <p>The Tru-Scapes® Team</p>
+      `
+    });
+  }
+
+  async sendAccountApprovedEmail(to: string, customerName: string) {
+    return this.sendEmail({
+      to,
+      subject: 'Good News! Your Tru-Scapes® Account Is Now Approved',
+      html: `
+        <p>Hello ${customerName},</p>
+        <p>We're happy to let you know that your Tru-Scapes® account has been approved! You can now log in and start enjoying all the features our platform has to offer.</p>
+        <div class="details">
+          <h2>Next steps:</h2>
+          <p>Log In: Access your account with your email and password.</p>
+          <p>Explore & Enjoy: Browse our services, request quotes, place orders, and get the most out of Tru-Scapes®!</p>
+        </div>
+        <p>If you have any questions or need assistance, reply to this email and we'll gladly help.</p>
+        <p>Thank you,</p>
+        <p>The Tru-Scapes® Team</p>
+      `
+    });
+  }
+
+  async sendNewAccountNotificationToAdmin(adminEmails: string[], customerDetails: any) {
+    return this.sendEmail({
+      to: adminEmails,
+      subject: `New Account Pending Approval: ${customerDetails.name}`,
+      html: `
+        <p>Hello Admin,</p>
+        <p>A new user, ${customerDetails.name}, has just signed up and their account is awaiting your approval. Please review their details to ensure they meet the Tru-Scapes® criteria and then proceed with the approval process.</p>
+        <div class="details">
+          <h2>User Details:</h2>
+          <p>Name: ${customerDetails.name}</p>
+          <p>Email: ${customerDetails.email}</p>
+          <p>Signup Date: ${new Date(customerDetails.createdAt).toLocaleDateString()}</p>
+        </div>
+        <p>Thank you,</p>
+        <p>The Tru-Scapes® Team</p>
+      `
+    });
+  }
+
+  // Password Reset Emails
+  async sendPasswordResetEmail(to: string, customerName: string, resetLink: string) {
+    return this.sendEmail({
+      to,
+      subject: 'Resetting Your Tru-Scapes® Password Is Easy',
+      html: `
+        <p>Hello ${customerName},</p>
+        <p>We heard you need to reset your password. Not to worry—it happens to the best of us!</p>
+        <p>Just click the link below to reset:</p>
+        <a href="${resetLink}" class="button">Reset My Password</a>
+        <p>If you didn't request this, please ignore this email and your password will remain unchanged.</p>
+        <p>Need more help? We're here for you.</p>
+        <p>Cheers,</p>
+        <p>The Tru-Scapes® Team</p>
+      `
+    });
+  }
+
+  async sendNewPasswordEmail(to: string, customerName: string, newPassword: string) {
+    return this.sendEmail({
+      to,
+      subject: 'Your New Tru-Scapes® Password',
+      html: `
+        <p>Hello ${customerName},</p>
+        <p>We've generated a new password for your account as requested.</p>
+        <div class="details">
+          <p>Your Temporary Password: ${newPassword}</p>
+        </div>
+        <p>Please log in using the new password and update it to something memorable right away.</p>
+        <p>If you didn't request this change, please reach out to us immediately.</p>
+        <p>Thank you,</p>
+        <p>The Tru-Scapes® Team</p>
+      `
+    });
+  }
+
+  // Wallet Emails
+  async sendWalletUpdateEmail(to: string, customerName: string, amount: number, currentBalance: number) {
+    return this.sendEmail({
+      to,
+      subject: 'Your Tru-Scapes® Wallet Has Been Updated',
+      html: `
+        <p>Hello ${customerName},</p>
+        <p>Great news! Your Tru-Scapes® wallet was just Credited with ${amount}.</p>
+        <div class="details">
+          <h2>Transaction details:</h2>
+          <p>Type: Credit</p>
+          <p>Amount: ${amount}</p>
+          <p>Current Balance: ${currentBalance}</p>
+        </div>
+        <p>You can review your full transaction history and wallet balance anytime from your Dashboard.</p>
+        <p>If anything looks incorrect or you have questions, we're always here to help.</p>
+        <p>Cheers,</p>
+        <p>The Tru-Scapes® Team</p>
+      `
+    });
+  }
+
+  async sendPaymentRequestEmail(to: string, customerName: string, orderId: string, amount: number, paymentLink: string) {
+    return this.sendEmail({
+      to,
+      subject: 'Payment Request for Your Wallet Balance Payment',
+      html: `
+        <p>Hello ${customerName},</p>
+        <p>We hope you've been enjoying Tru-Scapes®! Earlier, we provided a temporary credit to your Tru-Scapes® wallet to help you get started with your orders. Now that the agreed-upon period has passed, we kindly request that you settle the remaining amount.</p>
+        <div class="details">
+          <h2>Payment details:</h2>
+          <p>Order ID: ${orderId}</p>
+          <p>Amount Due: ${amount}</p>
+        </div>
+        <a href="${paymentLink}" class="button">Pay Now</a>
+        <p>Once payment is completed, you'll continue enjoying all the benefits and features Tru-Scapes® has to offer. If you have any questions or concerns, simply reply to this email, and we'll be happy to assist you.</p>
+        <p>Thank you,</p>
+        <p>The Tru-Scapes® Team</p>
+      `
+    });
+  }
+
+  // Order Emails
+  async sendOrderConfirmationEmail(to: string, customerName: string, orderDetails: any) {
+    return this.sendEmail({
+      to,
+      subject: `Your New Tru-Scapes® Order ${orderDetails.id} Is Confirmed`,
+      html: `
+        <p>Hello ${customerName},</p>
+        <p>Thanks for choosing Tru-Scapes®! We're excited to let you know that your order ${orderDetails.id} is confirmed and is now being processed.</p>
+        <div class="details">
+          <h2>Order Details:</h2>
+          <p>Items/Service: ${orderDetails.items}</p>
+        </div>
+        <p>You can view and manage your order anytime in your Order History.</p>
+        <p>If you have questions, we're always just an email away!</p>
+        <p>Thank you,</p>
+        <p>The Tru-Scapes Team</p>
+      `
+    });
+  }
+
+  async sendNewOrderNotificationToAdmin(adminEmails: string[], orderDetails: any) {
+    return this.sendEmail({
+      to: adminEmails,
+      subject: `New Order Alert: ${orderDetails.id} by ${orderDetails.customerName}`,
+      html: `
+        <p>Hello Admin,</p>
+        <p>A new order has just rolled in!</p>
+        <div class="details">
+          <h2>Order Details:</h2>
+          <p>Order ID: ${orderDetails.id}</p>
+          <p>Customer: ${orderDetails.customerName} (${orderDetails.customerEmail})</p>
+          <p>Items/Service: ${orderDetails.items}</p>
+          <p>Date: ${new Date(orderDetails.date).toLocaleString()}</p>
+        </div>
+        <p>Please review and ensure everything is in motion to deliver a top-notch experience.</p>
+        <p>Best,</p>
+        <p>Tru-Scapes®</p>
+      `
+    });
+  }
+
+  async sendOrderStatusUpdateEmail(to: string, customerName: string, orderId: string, newStatus: string) {
+    return this.sendEmail({
+      to,
+      subject: `Update on Your Tru-Scapes® Order ${orderId}`,
+      html: `
+        <p>Hello ${customerName},</p>
+        <p>We've got some news about your order ${orderId}:</p>
+        <div class="details">
+          <p>Current Status: ${newStatus}</p>
+        </div>
+        <p>We're working to ensure everything goes smoothly. If you have any questions or need more info, just reply to this email, and we'll be happy to help.</p>
+        <p>Track your order anytime: <a href="https://tru-scapes.com/orders">Order History</a>.</p>
+        <p>Thank you,</p>
+        <p>The Tru-Scapes Team</p>
+      `
+    });
+  }
+
+  async sendOrderDeliveredEmail(to: string, customerName: string, orderId: string) {
+    return this.sendEmail({
+      to,
+      subject: `Your Tru-Scapes® Order ${orderId} Is Complete!`,
+      html: `
+        <p>Hello ${customerName},</p>
+        <p>Happy day! Your order ${orderId} has been successfully delivered.</p>
+        <p>We hope everything meets (or even exceeds) your expectations. If you love what you received, consider leaving a review to help other customers make informed decisions.</p>
+        <p>Need help or have questions? Just hit reply, and we'll be there for you.</p>
+        <p>Thanks for choosing Tru-Scapes®!</p>
+        <p>Best,</p>
+        <p>The Tru-Scapes® Team</p>
+      `
+    });
+  }
+}

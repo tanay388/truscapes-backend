@@ -18,26 +18,27 @@ import { GalleryModule } from './models/gallery/gallery.module';
 import { WalletModule } from './models/wallet/wallet.module';
 import { TransactionsModule } from './models/transactions/transactions.module';
 import { OrdersModule } from './models/orders/orders.module';
+import { EmailModule } from './providers/email/email.module';
 
 @Module({
   imports: [
-    MulterModule.register({ dest: join(__dirname, '../public/upload') }), // Used to handle file upload
-    // ServeStaticModule.forRoot({ rootPath: join(__dirname, '../public') }), // Used to server static files from static routes
-    ScheduleModule.forRoot(), // Used to schedule CORN Tasks if required
+    MulterModule.register({ dest: join(__dirname, '../public/upload') }),
+    ScheduleModule.forRoot(),
     ConfigModule.forRoot({
       isGlobal: true,
       ignoreEnvFile: false,
-    }), // Used to load environment variables or any other config
+    }),
     ThrottlerModule.forRoot([
       {
         ttl: 1000,
         limit: 10,
       },
-    ]), // Used to prevent DDOS Attacks
+    ]),
     DatabaseModule,
     FirebaseModule,
     AppCacheModule,
     NotificationModule,
+    EmailModule,
     UserModule,
     ProductsModule,
     CategoryModule,
