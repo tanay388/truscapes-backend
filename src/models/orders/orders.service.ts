@@ -228,7 +228,7 @@ export class OrdersService {
 
   async findOne(id: number, userId: string) {
     const order = await Order.findOne({
-      where: { id, user: { id: userId } },
+      where: { id },
     });
 
     if (!order) {
