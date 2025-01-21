@@ -167,15 +167,14 @@ export class EmailService {
   async sendNewAccountNotificationToAdmin(customerDetails: any) {
     return this.sendEmail({
       to: this.adminEmails,
-      subject: `New Account Pending Approval: ${customerDetails.name}`,
+      subject: `New Account Pending Approval: ${customerDetails.email}`,
       html: `
         <p>Hello Admin,</p>
-        <p>A new user, ${customerDetails.name}, has just signed up and their account is awaiting your approval. Please review their details to ensure they meet the Tru-Scapes® criteria and then proceed with the approval process.</p>
+        <p>A new user, ${customerDetails.email}, has just signed up and their account is awaiting your approval. Please review their details to ensure they meet the Tru-Scapes® criteria and then proceed with the approval process.</p>
         <div class="details">
           <h2>User Details:</h2>
-          <p>Name: ${customerDetails.name}</p>
           <p>Email: ${customerDetails.email}</p>
-          <p>Signup Date: ${new Date(customerDetails.createdAt).toLocaleDateString()}</p>
+          <p>Signup Date: ${new Date().toLocaleDateString()}</p>
         </div>
         <p>Thank you,</p>
         <p>The Tru-Scapes® Team</p>
@@ -183,14 +182,11 @@ export class EmailService {
     });
   }
 
-
-
   // Wallet Emails
   async sendWalletUpdateEmail(
     to: string,
     customerName: string,
     amount: number,
-    
   ) {
     return this.sendEmail({
       to,

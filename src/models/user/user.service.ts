@@ -52,6 +52,8 @@ export class UserService {
     user.approved = true;
     await user.save();
 
+    await this.emailService.sendAccountApprovedEmail(user.email, user.name);
+
     return user;
   }
 
@@ -89,8 +91,8 @@ export class UserService {
       wallet: { id: wallet.id },
     });
 
-    await this.emailService.sendAccountPendingEmail(email, fUser.name);
-    await this.emailService.sendNewAccountNotificationToAdmin(user);
+    await this.emailService.sendAccountPendingEmail(fUser.email, fUser.name);
+    await this.emailService.sendNewAccountNotificationToAdmin(fUser);
 
     return this.getProfile(fUser);
   }
