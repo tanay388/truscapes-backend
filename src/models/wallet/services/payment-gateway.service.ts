@@ -9,6 +9,11 @@ import Stripe from 'stripe';
 import * as paypal from '@paypal/checkout-server-sdk';
 import { ApiContracts, ApiControllers, Constants } from 'authorizenet';
 import { Wallet } from '../entities/wallet.entity';
+import {
+  PaymentMethod,
+  Transaction,
+  TransactionType,
+} from 'src/models/transactions/entities/transaction.entity';
 
 interface PaymentResponse {
   success: boolean;
@@ -244,14 +249,39 @@ export class PaymentGatewayService {
       if (session.payment_status === 'paid') {
         if (session.metadata.type === 'repay-dues') {
           const userId = session.metadata.userId;
+
+          const existingTransaction = await Transaction.findOne({
+            where: {
+              paymentMethod: PaymentMethod.STRIPE,
+              paymentTransactionId: session.id,
+            },
+          });
+          if (existingTransaction) {
+            return {
+              success: true,
+              requiresAction: false,
+            };
+          }
+
           const wallet = await Wallet.findOne({
             where: { user: { id: userId } },
           });
+          const amountPaid = session.amount_total / 100;
           if (!wallet) {
             throw new NotFoundException('Wallet not found');
           }
           wallet.creditDue = 0;
           await wallet.save();
+
+          const transaction = new Transaction();
+          transaction.type = TransactionType.CREDIT_REPAYMENT;
+          transaction.amount = amountPaid;
+          transaction.description = `Credit repayment for ${amountPaid} from Stripe`;
+          transaction.paymentMethod = PaymentMethod.STRIPE;
+          transaction.paymentTransactionId = session.id;
+          transaction.user = wallet.user;
+
+          return await transaction.save();
         }
         return {
           success: true,
