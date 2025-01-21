@@ -260,16 +260,16 @@ export class EmailService {
   async sendNewOrderNotificationToAdmin(orderDetails: any) {
     return this.sendEmail({
       to: this.adminEmails,
-      subject: `New Order Alert: ${orderDetails.id} by ${orderDetails.customerName}`,
+      subject: `New Order Alert: ${orderDetails.id} by ${orderDetails.user.name}`,
       html: `
         <p>Hello Admin,</p>
         <p>A new order has just rolled in!</p>
         <div class="details">
           <h2>Order Details:</h2>
           <p>Order ID: ${orderDetails.id}</p>
-          <p>Customer: ${orderDetails.customerName} (${orderDetails.customerEmail})</p>
+          <p>Customer: ${orderDetails.user.name} (${orderDetails.user.email})</p>
           <p>Items/Service: ${orderDetails.items}</p>
-          <p>Date: ${new Date(orderDetails.date).toLocaleString()}</p>
+          <p>Date: ${new Date().toLocaleString()}</p>
         </div>
         <p>Please review and ensure everything is in motion to deliver a top-notch experience.</p>
         <p>Best,</p>

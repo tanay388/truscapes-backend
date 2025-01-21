@@ -19,6 +19,7 @@ import {
   OrderStatus,
   PaymentStatus,
 } from 'src/models/orders/entities/order.entity';
+import { EmailService } from 'src/providers/email/email.service';
 
 interface PaymentResponse {
   success: boolean;
@@ -32,7 +33,7 @@ export class PaymentGatewayService {
   private stripe: Stripe;
   private paypalClient: paypal.core.PayPalHttpClient;
 
-  constructor(private configService: ConfigService) {
+  constructor(private configService: ConfigService, private emailService: EmailService) {
     // Initialize Stripe
     this.stripe = new Stripe(process.env.STRIPE_SECRET, {
       apiVersion: '2023-10-16',
@@ -301,15 +302,13 @@ export class PaymentGatewayService {
           order.status = OrderStatus.CONFIRMED;
           order.paymentIntentId = sessionId;
           await order.save();
+          await this.emailService.sendOrderConfirmationEmail(order.user.email, order.user.name, order);
+          await this.emailService.sendNewOrderNotificationToAdmin(order)
           return {
             success: true,
             requiresAction: false,
           };
         }
-        return {
-          success: true,
-          requiresAction: false,
-        };
       }
     } else if (paymentGateway === PaymentGateway.PAYPAL) {
     }
