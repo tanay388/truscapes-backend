@@ -80,7 +80,7 @@ export class OrdersService {
       }
 
       const price = this.getRoleBasedPrice(product, variant, user);
-      console.log('userPrice' + ' ' + product.basePrice);
+      console.log('userPrice' + ' ' + price);
       const total = price * item.quantity;
 
       shippingCostValue = shippingCostValue + product.shippingCost;
@@ -93,11 +93,17 @@ export class OrdersService {
       orderItem.total = total;
       orderItems.push(orderItem);
 
+      console.log('total' + ' ' + total);
+
       subtotal += total;
     }
 
     // Calculate shipping cost (you can implement your own logic)
     const shippingCost = shippingCostValue; // Default shipping cost
+
+    console.log('subtotal' + ' ' + subtotal);
+    console.log('shippingCost' + ' ' + shippingCost);
+    console.log('total' + ' ' + (subtotal + shippingCost));
 
     order.items = orderItems;
     order.subtotal = subtotal;
