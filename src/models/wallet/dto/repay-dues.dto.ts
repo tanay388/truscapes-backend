@@ -5,7 +5,8 @@ import { Type } from 'class-transformer';
 export enum PaymentGateway {
   PAYPAL = 'PAYPAL',
   AUTHORIZE_NET = 'AUTHORIZE_NET',
-  STRIPE = 'STRIPE'
+  STRIPE = 'STRIPE',
+  WALLET = 'WALLET',
 }
 
 export class CardInfo {

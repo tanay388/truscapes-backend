@@ -2,6 +2,7 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import { 
   IsArray, 
+  IsEnum, 
   IsNotEmpty, 
   IsNumber, 
   IsObject, 
@@ -9,6 +10,7 @@ import {
   IsString, 
   ValidateNested 
 } from 'class-validator';
+import { PaymentGateway } from 'src/models/wallet/dto/repay-dues.dto';
 
 class OrderItemDto {
   @ApiProperty({ description: 'Product ID' })
@@ -97,4 +99,9 @@ export class CreateOrderDto {
   @ValidateNested({ each: true })
   @Type(() => CardInfo)
   cardInfo?: CardInfo;
+
+  @ApiProperty({ required: true})
+  @IsNotEmpty()
+  @IsEnum(PaymentGateway)
+  gateway: PaymentGateway;
 }

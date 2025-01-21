@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderDto } from './dto/update-order.dto';
 import { Order, OrderStatus, PaymentStatus } from './entities/order.entity';
@@ -10,6 +14,10 @@ import { Pagination } from 'src/common/dtos/pagination.dto';
 import { PaymentGatewayService } from '../wallet/services/payment-gateway.service';
 import { PaymentGateway } from '../wallet/dto/repay-dues.dto';
 import { NotificationService } from 'src/providers/notification/notification.service';
+import {
+  Transaction,
+  TransactionType,
+} from '../transactions/entities/transaction.entity';
 
 @Injectable()
 export class OrdersService {
@@ -50,23 +58,27 @@ export class OrdersService {
 
     // Process each order item
     for (const item of createOrderDto.items) {
-      const product = await Product.findOne({ 
-        where: { id: item.productId }
+      const product = await Product.findOne({
+        where: { id: item.productId },
       });
       if (!product) {
-        throw new NotFoundException(`Product with ID ${item.productId} not found`);
+        throw new NotFoundException(
+          `Product with ID ${item.productId} not found`,
+        );
       }
 
       let variant: ProductVariant | null = null;
       if (item.variantId) {
-        variant = await ProductVariant.findOne({ 
-          where: { id: item.variantId }
+        variant = await ProductVariant.findOne({
+          where: { id: item.variantId },
         });
         if (!variant) {
-          throw new NotFoundException(`Product variant with ID ${item.variantId} not found`);
+          throw new NotFoundException(
+            `Product variant with ID ${item.variantId} not found`,
+          );
         }
       }
-      
+
       const price = this.getRoleBasedPrice(product, variant, user);
       const total = price * item.quantity;
 
@@ -95,35 +107,67 @@ export class OrdersService {
 
     await order.save();
 
+    if (createOrderDto.gateway === PaymentGateway.WALLET) {
+      if (user.wallet.balance < order.total) {
+        throw new BadRequestException('Insufficient wallet balance');
+      }
+
+      user.wallet.balance -= order.total;
+      await user.wallet.save();
+
+      order.paymentStatus = PaymentStatus.COMPLETED;
+      order.paymentIntentId = 'wallet';
+      await order.save();
+
+      const transaction = new Transaction();
+      transaction.user = user;
+      transaction.type = TransactionType.WITHDRAWAL;
+      transaction.amount = order.total;
+      transaction.description = `Order #${order.id}`;
+
+      await transaction.save();
+
+      return {
+        success: true,
+        message: `Successfully processed payment for order #${order.id}`,
+        transactionId: transaction.id,
+      };
+    }
+
     // Create Stripe payment intent
-    const paymentIntent = await this.paymentGatewayService.processPayment(
-      PaymentGateway.STRIPE,
+    const payment = await this.paymentGatewayService.processPayment(
+      createOrderDto.gateway,
       order.total,
       null,
       userId,
+      { type: 'order', orderId: order.id },
     );
 
-    order.paymentIntentId = paymentIntent.transactionId;
-    await order.save();
+    if (payment.requiresAction) {
+      return {
+        success: true,
+        paymentUrl: payment.paymentUrl,
+        message: 'Please complete the payment using the provided URL',
+      };
+    }
+    // For Authorize.NET, process payment and update wallet immediately
+    if (payment.success) {
+      order.paymentStatus = PaymentStatus.COMPLETED;
+      order.paymentIntentId = payment.transactionId;
+      await order.save();
+      return {
+        success: true,
+        message: `Successfully processed payment for order #${order.id}`,
+        transactionId: payment.transactionId,
+      };
+    }
 
-    // Send notification
-    await this.notificationService.sendNotificationToUser({
-      notification: {
-        title: 'Order Created',
-        body: `Your order #${order.id} has been created. Please complete the payment.`,
-      },
-      user: { id: userId },
-    });
-
-    return {
-      order,
-      paymentUrl: paymentIntent.paymentUrl,
-    };
+    throw new BadRequestException('Payment processing failed');
   }
 
   async confirmPayment(orderId: number, userId: string) {
-    const order = await Order.findOne({ 
-      where: { id: orderId, user: { id: userId } }
+    const order = await Order.findOne({
+      where: { id: orderId, user: { id: userId } },
     });
 
     if (!order) {
@@ -172,8 +216,8 @@ export class OrdersService {
   }
 
   async findOne(id: number, userId: string) {
-    const order = await Order.findOne({ 
-      where: { id, user: { id: userId } }
+    const order = await Order.findOne({
+      where: { id, user: { id: userId } },
     });
 
     if (!order) {
