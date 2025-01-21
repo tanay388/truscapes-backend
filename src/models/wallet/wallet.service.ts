@@ -15,12 +15,14 @@ import {
 } from '../transactions/entities/transaction.entity';
 import { User } from '../user/entities/user.entity';
 import { PaymentGatewayService } from './services/payment-gateway.service';
+import { EmailService } from 'src/providers/email/email.service';
 
 @Injectable()
 export class WalletService {
   constructor(
     private readonly transactionsService: TransactionsService,
     private readonly paymentGatewayService: PaymentGatewayService,
+    private readonly emailService: EmailService,
   ) {}
 
   async findOne(userId: string) {
