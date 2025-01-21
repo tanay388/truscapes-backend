@@ -126,6 +126,7 @@ export class OrdersService {
       await user.wallet.save();
 
       order.paymentStatus = PaymentStatus.COMPLETED;
+      order.status = OrderStatus.CONFIRMED;
       order.paymentIntentId = 'wallet';
       await order.save();
 
