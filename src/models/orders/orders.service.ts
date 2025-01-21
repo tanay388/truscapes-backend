@@ -18,12 +18,14 @@ import {
   Transaction,
   TransactionType,
 } from '../transactions/entities/transaction.entity';
+import { EmailService } from 'src/providers/email/email.service';
 
 @Injectable()
 export class OrdersService {
   constructor(
     private readonly paymentGatewayService: PaymentGatewayService,
     private readonly notificationService: NotificationService,
+    private readonly emailService: EmailService,
   ) {}
 
   getRoleBasedPrice(product: Product, variant: ProductVariant, user: User) {
@@ -258,13 +260,20 @@ export class OrdersService {
     await order.save();
 
     // Send notification to user
-    await this.notificationService.sendNotificationToUser({
-      notification: {
-        title: 'Order Updated',
-        body: `Your order #${order.id} status has been updated to ${order.status}`,
-      },
-      user: { id: order.user.id },
-    });
+    if (order.status != OrderStatus.DELIVERED)
+      await this.emailService.sendOrderStatusUpdateEmail(
+        order.user.email,
+        order.user.name,
+        order.id.toString(),
+        order.status,
+      );
+
+    if (order.status === OrderStatus.DELIVERED)
+      await this.emailService.sendOrderDeliveredEmail(
+        order.user.email,
+        order.user.name,
+        order.id.toString(),
+      );
 
     return order;
   }
