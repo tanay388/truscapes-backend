@@ -4,9 +4,12 @@ import { UpdateTransactionDto } from './dto/update-transaction.dto';
 import { Transaction, TransactionType } from './entities/transaction.entity';
 import { User } from '../user/entities/user.entity';
 import { Pagination } from 'src/common/dtos/pagination.dto';
+import { EmailService } from 'src/providers/email/email.service';
 
 @Injectable()
 export class TransactionsService {
+  constructor(private emailService: EmailService) {}
+
   async addTransaction(
     type: TransactionType,
     amount: number,
@@ -25,7 +28,15 @@ export class TransactionsService {
     transaction.description = description;
     transaction.user = user;
 
-    return transaction.save();
+    await transaction.save();
+
+    await this.emailService.sendWalletUpdateEmail(
+      user.email,
+      user.name,
+      amount,
+    );
+
+    return transaction;
   }
 
   async findAll(pagination: Pagination) {

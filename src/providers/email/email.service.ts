@@ -12,6 +12,10 @@ interface EmailOptions {
 @Injectable()
 export class EmailService {
   private transporter: nodemailer.Transporter;
+  private adminEmails: string[] = [
+    'tanay.deo388@gmail.com',
+    'deo.tanay388@gmail.com',
+  ];
   private readonly emailStyles = `
     <style>
       .email-container {
@@ -70,8 +74,11 @@ export class EmailService {
     this.transporter = nodemailer.createTransport({
       service: 'gmail',
       auth: {
-        user: this.configService.get<string>('SMTP_USER'),
-        pass: this.configService.get<string>('SMTP_PASSWORD'),
+        user:
+          process.env.SMTP_USER || this.configService.get<string>('SMTP_USER'),
+        pass:
+          process.env.SMTP_PASSWORD ||
+          this.configService.get<string>('SMTP_PASSWORD'),
       },
     });
   }
@@ -88,7 +95,7 @@ export class EmailService {
         <body>
           <div class="email-container">
             <div class="header">
-              <img src="https://tru-scapes.com/logo.png" alt="Tru-Scapes Logo" class="logo">
+              <img src="https://tru-scapes.com/wp-content/uploads/2023/12/truscapes-lighting-logo-2048x598.png.webp" alt="Tru-Scapes Logo" class="logo">
             </div>
             ${content}
             <div class="footer">
@@ -134,7 +141,7 @@ export class EmailService {
         <p>In the meantime, feel free to explore our website and check out our services. If you have any questions, just hit reply, and we'll be happy to help.</p>
         <p>Thank you for choosing Tru-Scapes!</p>
         <p>The Tru-Scapes® Team</p>
-      `
+      `,
     });
   }
 
@@ -153,13 +160,13 @@ export class EmailService {
         <p>If you have any questions or need assistance, reply to this email and we'll gladly help.</p>
         <p>Thank you,</p>
         <p>The Tru-Scapes® Team</p>
-      `
+      `,
     });
   }
 
-  async sendNewAccountNotificationToAdmin(adminEmails: string[], customerDetails: any) {
+  async sendNewAccountNotificationToAdmin(customerDetails: any) {
     return this.sendEmail({
-      to: adminEmails,
+      to: this.adminEmails,
       subject: `New Account Pending Approval: ${customerDetails.name}`,
       html: `
         <p>Hello Admin,</p>
@@ -172,48 +179,19 @@ export class EmailService {
         </div>
         <p>Thank you,</p>
         <p>The Tru-Scapes® Team</p>
-      `
+      `,
     });
   }
 
-  // Password Reset Emails
-  async sendPasswordResetEmail(to: string, customerName: string, resetLink: string) {
-    return this.sendEmail({
-      to,
-      subject: 'Resetting Your Tru-Scapes® Password Is Easy',
-      html: `
-        <p>Hello ${customerName},</p>
-        <p>We heard you need to reset your password. Not to worry—it happens to the best of us!</p>
-        <p>Just click the link below to reset:</p>
-        <a href="${resetLink}" class="button">Reset My Password</a>
-        <p>If you didn't request this, please ignore this email and your password will remain unchanged.</p>
-        <p>Need more help? We're here for you.</p>
-        <p>Cheers,</p>
-        <p>The Tru-Scapes® Team</p>
-      `
-    });
-  }
 
-  async sendNewPasswordEmail(to: string, customerName: string, newPassword: string) {
-    return this.sendEmail({
-      to,
-      subject: 'Your New Tru-Scapes® Password',
-      html: `
-        <p>Hello ${customerName},</p>
-        <p>We've generated a new password for your account as requested.</p>
-        <div class="details">
-          <p>Your Temporary Password: ${newPassword}</p>
-        </div>
-        <p>Please log in using the new password and update it to something memorable right away.</p>
-        <p>If you didn't request this change, please reach out to us immediately.</p>
-        <p>Thank you,</p>
-        <p>The Tru-Scapes® Team</p>
-      `
-    });
-  }
 
   // Wallet Emails
-  async sendWalletUpdateEmail(to: string, customerName: string, amount: number, currentBalance: number) {
+  async sendWalletUpdateEmail(
+    to: string,
+    customerName: string,
+    amount: number,
+    
+  ) {
     return this.sendEmail({
       to,
       subject: 'Your Tru-Scapes® Wallet Has Been Updated',
@@ -224,17 +202,22 @@ export class EmailService {
           <h2>Transaction details:</h2>
           <p>Type: Credit</p>
           <p>Amount: ${amount}</p>
-          <p>Current Balance: ${currentBalance}</p>
         </div>
         <p>You can review your full transaction history and wallet balance anytime from your Dashboard.</p>
         <p>If anything looks incorrect or you have questions, we're always here to help.</p>
         <p>Cheers,</p>
         <p>The Tru-Scapes® Team</p>
-      `
+      `,
     });
   }
 
-  async sendPaymentRequestEmail(to: string, customerName: string, orderId: string, amount: number, paymentLink: string) {
+  async sendPaymentRequestEmail(
+    to: string,
+    customerName: string,
+    orderId: string,
+    amount: number,
+    paymentLink: string,
+  ) {
     return this.sendEmail({
       to,
       subject: 'Payment Request for Your Wallet Balance Payment',
@@ -250,12 +233,16 @@ export class EmailService {
         <p>Once payment is completed, you'll continue enjoying all the benefits and features Tru-Scapes® has to offer. If you have any questions or concerns, simply reply to this email, and we'll be happy to assist you.</p>
         <p>Thank you,</p>
         <p>The Tru-Scapes® Team</p>
-      `
+      `,
     });
   }
 
   // Order Emails
-  async sendOrderConfirmationEmail(to: string, customerName: string, orderDetails: any) {
+  async sendOrderConfirmationEmail(
+    to: string,
+    customerName: string,
+    orderDetails: any,
+  ) {
     return this.sendEmail({
       to,
       subject: `Your New Tru-Scapes® Order ${orderDetails.id} Is Confirmed`,
@@ -270,13 +257,13 @@ export class EmailService {
         <p>If you have questions, we're always just an email away!</p>
         <p>Thank you,</p>
         <p>The Tru-Scapes Team</p>
-      `
+      `,
     });
   }
 
-  async sendNewOrderNotificationToAdmin(adminEmails: string[], orderDetails: any) {
+  async sendNewOrderNotificationToAdmin(orderDetails: any) {
     return this.sendEmail({
-      to: adminEmails,
+      to: this.adminEmails,
       subject: `New Order Alert: ${orderDetails.id} by ${orderDetails.customerName}`,
       html: `
         <p>Hello Admin,</p>
@@ -291,11 +278,16 @@ export class EmailService {
         <p>Please review and ensure everything is in motion to deliver a top-notch experience.</p>
         <p>Best,</p>
         <p>Tru-Scapes®</p>
-      `
+      `,
     });
   }
 
-  async sendOrderStatusUpdateEmail(to: string, customerName: string, orderId: string, newStatus: string) {
+  async sendOrderStatusUpdateEmail(
+    to: string,
+    customerName: string,
+    orderId: string,
+    newStatus: string,
+  ) {
     return this.sendEmail({
       to,
       subject: `Update on Your Tru-Scapes® Order ${orderId}`,
@@ -309,11 +301,15 @@ export class EmailService {
         <p>Track your order anytime: <a href="https://tru-scapes.com/orders">Order History</a>.</p>
         <p>Thank you,</p>
         <p>The Tru-Scapes Team</p>
-      `
+      `,
     });
   }
 
-  async sendOrderDeliveredEmail(to: string, customerName: string, orderId: string) {
+  async sendOrderDeliveredEmail(
+    to: string,
+    customerName: string,
+    orderId: string,
+  ) {
     return this.sendEmail({
       to,
       subject: `Your Tru-Scapes® Order ${orderId} Is Complete!`,
@@ -325,7 +321,7 @@ export class EmailService {
         <p>Thanks for choosing Tru-Scapes®!</p>
         <p>Best,</p>
         <p>The Tru-Scapes® Team</p>
-      `
+      `,
     });
   }
 }

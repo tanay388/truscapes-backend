@@ -46,6 +46,7 @@ import { EmailModule } from './providers/email/email.module';
     WalletModule,
     TransactionsModule,
     OrdersModule,
+    EmailModule,
   ],
   controllers: [AppController],
   providers: [AppService],

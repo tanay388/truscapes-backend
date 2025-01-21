@@ -6,6 +6,7 @@ import { UploaderService } from '../../providers/uploader/uploader.service';
 import { NotificationService } from 'src/providers/notification/notification.service';
 import { Pagination } from 'src/common/dtos/pagination.dto';
 import { Wallet } from '../wallet/entities/wallet.entity';
+import { EmailService } from 'src/providers/email/email.service';
 
 @Injectable()
 export class UserService {
@@ -13,6 +14,7 @@ export class UserService {
     // private analyticsService: AnalyticsService,
     private uploader: UploaderService,
     private notificationService: NotificationService,
+    private emailService: EmailService,
   ) {}
 
   updateToken(uid: string, token: string) {
@@ -83,9 +85,12 @@ export class UserService {
       user: { id: uid },
     });
 
-    await User.update(uid, {
+    const user = await User.update(uid, {
       wallet: { id: wallet.id },
     });
+
+    await this.emailService.sendAccountPendingEmail(email, fUser.name);
+    await this.emailService.sendNewAccountNotificationToAdmin(user);
 
     return this.getProfile(fUser);
   }
