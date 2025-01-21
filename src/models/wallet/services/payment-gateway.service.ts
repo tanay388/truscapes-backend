@@ -14,6 +14,11 @@ import {
   Transaction,
   TransactionType,
 } from 'src/models/transactions/entities/transaction.entity';
+import {
+  Order,
+  OrderStatus,
+  PaymentStatus,
+} from 'src/models/orders/entities/order.entity';
 
 interface PaymentResponse {
   success: boolean;
@@ -66,7 +71,7 @@ export class PaymentGatewayService {
             paymentData,
             userId,
           );
-          
+
         default:
           throw new BadRequestException('Unsupported payment gateway');
       }
@@ -283,6 +288,23 @@ export class PaymentGatewayService {
           transaction.user = wallet.user;
 
           return await transaction.save();
+        } else {
+          const orderId = session.metadata.orderId;
+          const userId = session.metadata.userId;
+          const order = await Order.findOne({
+            where: { id: parseInt(orderId.toString()), user: { id: userId } },
+          });
+          if (!order) {
+            throw new NotFoundException('Order not found');
+          }
+          order.paymentStatus = PaymentStatus.COMPLETED;
+          order.status = OrderStatus.CONFIRMED;
+          order.paymentIntentId = sessionId;
+          await order.save();
+          return {
+            success: true,
+            requiresAction: false,
+          };
         }
         return {
           success: true,
