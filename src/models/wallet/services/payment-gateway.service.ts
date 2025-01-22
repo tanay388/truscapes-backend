@@ -33,7 +33,10 @@ export class PaymentGatewayService {
   private stripe: Stripe;
   private paypalClient: paypal.core.PayPalHttpClient;
 
-  constructor(private configService: ConfigService, private emailService: EmailService) {
+  constructor(
+    private configService: ConfigService,
+    private emailService: EmailService,
+  ) {
     // Initialize Stripe
     this.stripe = new Stripe(process.env.STRIPE_SECRET, {
       apiVersion: '2023-10-16',
@@ -43,8 +46,8 @@ export class PaymentGatewayService {
     const environment =
       this.configService.get('PAYPAL_ENVIRONMENT') === 'production'
         ? new paypal.core.LiveEnvironment(
-            this.configService.get('PAYPAL_CLIENT_ID'),
-            this.configService.get('PAYPAL_CLIENT_SECRET'),
+            process.env.PAYPAL_CLIENT_ID,
+            process.env.PAYPAL_CLIENT_SECRET,
           )
         : new paypal.core.SandboxEnvironment(
             this.configService.get('PAYPAL_CLIENT_ID'),
@@ -150,8 +153,12 @@ export class PaymentGatewayService {
           },
         ],
         application_context: {
-          return_url: this.configService.get('PAYPAL_RETURN_URL'),
-          cancel_url: this.configService.get('PAYPAL_CANCEL_URL'),
+          return_url:
+            'https://localhost:3000/success?session_id={CHECKOUT_SESSION_ID}&gateway=' +
+            PaymentGateway.PAYPAL,
+          cancel_url:
+            'https://localhost:3000/cancel?session_id={CHECKOUT_SESSION_ID}&gateway=' +
+            PaymentGateway.PAYPAL,
         },
       });
 
@@ -184,10 +191,10 @@ export class PaymentGatewayService {
       const merchantAuthenticationType =
         new ApiContracts.MerchantAuthenticationType();
       merchantAuthenticationType.setName(
-        this.configService.get('AUTHORIZE_NET_API_LOGIN_ID'),
+        process.env.AUTHORIZE_NET_API_LOGIN_ID,
       );
       merchantAuthenticationType.setTransactionKey(
-        this.configService.get('AUTHORIZE_NET_TRANSACTION_KEY'),
+        process.env.AUTHORIZE_NET_TRANSACTION_KEY,
       );
 
       const creditCard = new ApiContracts.CreditCardType();
@@ -302,8 +309,12 @@ export class PaymentGatewayService {
           order.status = OrderStatus.CONFIRMED;
           order.paymentIntentId = sessionId;
           await order.save();
-          await this.emailService.sendOrderConfirmationEmail(order.user.email, order.user.name, order);
-          await this.emailService.sendNewOrderNotificationToAdmin(order)
+          await this.emailService.sendOrderConfirmationEmail(
+            order.user.email,
+            order.user.name,
+            order,
+          );
+          await this.emailService.sendNewOrderNotificationToAdmin(order);
           return {
             success: true,
             requiresAction: false,
