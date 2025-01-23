@@ -225,7 +225,7 @@ export class PaymentGatewayService {
       );
 
       transactionRequestType.setPayment(paymentType);
-      transactionRequestType.setAmount(1);
+      transactionRequestType.setAmount(amount);
       transactionRequestType.setTransactionSettings(transactionSettings);
 
       const createRequests = new ApiContracts.CreateTransactionRequest();

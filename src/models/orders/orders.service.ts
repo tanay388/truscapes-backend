@@ -167,6 +167,7 @@ export class OrdersService {
     if (payment.success) {
       order.paymentStatus = PaymentStatus.COMPLETED;
       order.paymentIntentId = payment.transactionId;
+      order.status = OrderStatus.CONFIRMED;
       await order.save();
       return {
         success: true,
