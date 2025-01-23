@@ -43,16 +43,11 @@ export class PaymentGatewayService {
     });
 
     // Initialize PayPal
-    const environment =
-      this.configService.get('PAYPAL_ENVIRONMENT') === 'production'
-        ? new paypal.core.LiveEnvironment(
-            process.env.PAYPAL_CLIENT_ID,
-            process.env.PAYPAL_CLIENT_SECRET,
-          )
-        : new paypal.core.SandboxEnvironment(
-            this.configService.get('PAYPAL_CLIENT_ID'),
-            this.configService.get('PAYPAL_CLIENT_SECRET'),
-          );
+    const environment = new paypal.core.LiveEnvironment(
+      process.env.PAYPAL_CLIENT_ID,
+      process.env.PAYPAL_CLIENT_SECRET,
+    );
+
     this.paypalClient = new paypal.core.PayPalHttpClient(environment);
   }
 
@@ -114,10 +109,10 @@ export class PaymentGatewayService {
         },
         mode: 'payment',
         success_url:
-          'https://localhost:3000/success?session_id={CHECKOUT_SESSION_ID}&gateway=' +
+          'https://shop.tru-scapes.com/success?session_id={CHECKOUT_SESSION_ID}&gateway=' +
           PaymentGateway.STRIPE,
         cancel_url:
-          'https://localhost:3000/cancel?session_id={CHECKOUT_SESSION_ID}&gateway=' +
+          'https://shop.tru-scapes.com/cancel?session_id={CHECKOUT_SESSION_ID}&gateway=' +
           PaymentGateway.STRIPE,
       });
 
@@ -154,10 +149,10 @@ export class PaymentGatewayService {
         ],
         application_context: {
           return_url:
-            'https://localhost:3000/success?session_id={CHECKOUT_SESSION_ID}&gateway=' +
+            'https://shop.tru-scapes.com/success?session_id={CHECKOUT_SESSION_ID}&gateway=' +
             PaymentGateway.PAYPAL,
           cancel_url:
-            'https://localhost:3000/cancel?session_id={CHECKOUT_SESSION_ID}&gateway=' +
+            'https://shop.tru-scapes.com/cancel?session_id={CHECKOUT_SESSION_ID}&gateway=' +
             PaymentGateway.PAYPAL,
         },
       });
@@ -202,30 +197,40 @@ export class PaymentGatewayService {
       creditCard.setExpirationDate(paymentData.expirationDate);
       creditCard.setCardCode(paymentData.cardCode);
 
+      console.log(creditCard);
+      console.log(paymentData);
+
       const paymentType = new ApiContracts.PaymentType();
       paymentType.setCreditCard(creditCard);
 
-      const transactionRequestType = new ApiContracts.TransactionRequestType();
-      transactionRequestType.setTransactionType(
-        ApiContracts.TransactionTypeEnum.AUTHCAPTURETRANSACTION,
-      );
-      transactionRequestType.setPayment(paymentType);
-      transactionRequestType.setAmount(amount);
+      const transactionSetting1 = new ApiContracts.SettingType();
+      transactionSetting1.setSettingName('duplicateWindow');
+      transactionSetting1.setSettingValue('120');
 
-      const createRequest = new ApiContracts.CreateTransactionRequest();
-      createRequest.setMerchantAuthentication(merchantAuthenticationType);
-      createRequest.setTransactionRequest(transactionRequestType);
+      var transactionSettingList = [];
+      transactionSettingList.push(transactionSetting1);
+
+      var transactionSettings = new ApiContracts.ArrayOfSetting();
+      transactionSettings.setSetting(transactionSettingList);
+      var transactionRequestType = new ApiContracts.TransactionRequestType();
+      transactionRequestType.setTransactionType(
+        ApiContracts.TransactionTypeEnum.AUTHONLYTRANSACTION,
+      );
+
+      transactionRequestType.setPayment(paymentType);
+      transactionRequestType.setAmount(1);
+      transactionRequestType.setTransactionSettings(transactionSettings);
+
+      const createRequests = new ApiContracts.CreateTransactionRequest();
+      createRequests.setMerchantAuthentication(merchantAuthenticationType);
+      createRequests.setTransactionRequest(transactionRequestType);
 
       const ctrl = new ApiControllers.CreateTransactionController(
-        createRequest.getJSON(),
+        createRequests.getJSON(),
       );
 
       // Set the environment
-      Constants.endpoint.setEnvironment(
-        this.configService.get('AUTHORIZE_NET_ENVIRONMENT') === 'production'
-          ? Constants.endpoint.PRODUCTION
-          : Constants.endpoint.SANDBOX,
-      );
+      ctrl.setEnvironment(Constants.endpoint.production);
 
       return new Promise((resolve, reject) => {
         ctrl.execute(() => {
