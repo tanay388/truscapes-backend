@@ -32,6 +32,7 @@
     "@nestjs/throttler": "^6.2.1",
     "@nestjs/typeorm": "^10.0.2",
     "@paypal/checkout-server-sdk": "^1.0.3",
+    "@types/authorizenet": "^1.0.2",
     "authorizenet": "^1.0.8",
     "axios": "^1.7.7",
     "cache-manager": "^5.1.3",
