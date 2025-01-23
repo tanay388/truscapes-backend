@@ -151,7 +151,7 @@ export class OrdersService {
     const payment = await this.paymentGatewayService.processPayment(
       createOrderDto.gateway,
       order.total,
-      null,
+      createOrderDto.cardInfo,
       userId,
       { type: 'order', orderId: order.id },
     );
