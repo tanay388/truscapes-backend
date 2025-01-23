@@ -7,8 +7,10 @@ import { ConfigService } from '@nestjs/config';
 import { PaymentGateway } from '../dto/repay-dues.dto';
 import Stripe from 'stripe';
 import * as paypal from '@paypal/checkout-server-sdk';
-import { ApiContracts, ApiControllers, Constants,  } from 'authorizenet';
-
+// import { ApiContracts, ApiControllers, Constants } from 'authorizenet';
+var ApiContracts = require('authorizenet').ApiContracts;
+var ApiControllers = require('authorizenet').ApiControllers;
+var Constants = require('authorizenet').Constants;
 import { Wallet } from '../entities/wallet.entity';
 import {
   PaymentMethod,
