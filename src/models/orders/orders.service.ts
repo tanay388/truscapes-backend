@@ -140,6 +140,14 @@ export class OrdersService {
 
       await transaction.save();
 
+      await this.emailService.sendOrderConfirmationEmail(
+        order.user.email,
+        order.user.name,
+        order,
+      );
+
+      await this.emailService.sendNewOrderNotificationToAdmin(order);
+
       return {
         success: true,
         message: `Successfully processed payment for order #${order.id}`,
