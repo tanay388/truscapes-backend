@@ -3,7 +3,7 @@ import { User } from 'src/models/user/entities/user.entity';
 import { Entity, Column, OneToOne, JoinColumn } from 'typeorm';
 
 @Entity()
-export class Wallet extends BaseClassEntity {
+export class CardInfo extends BaseClassEntity {
   @Column()
   cardNumber: string;
 

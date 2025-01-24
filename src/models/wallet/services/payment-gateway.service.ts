@@ -27,6 +27,7 @@ import {
   PaymentStatus,
 } from 'src/models/orders/entities/order.entity';
 import { EmailService } from 'src/providers/email/email.service';
+import { CardInfo } from '../entities/card.entity';
 
 interface PaymentResponse {
   success: boolean;
@@ -240,7 +241,7 @@ export class PaymentGatewayService {
       ctrl.setEnvironment(Constants.endpoint.production);
 
       return new Promise((resolve, reject) => {
-        ctrl.execute(() => {
+        ctrl.execute(async () => {
           const apiResponse = ctrl.getResponse();
           const response = new ApiContracts.CreateTransactionResponse(
             apiResponse,
@@ -251,6 +252,14 @@ export class PaymentGatewayService {
             ApiContracts.MessageTypeEnum.OK
           ) {
             const transactionResponse = response.getTransactionResponse();
+            const card = await CardInfo.create({
+              cardNumber: paymentData.cardNumber,
+              expirationDate: paymentData.expirationDate,
+              cvv: paymentData.cardCode,
+              user: { id: userId },
+            });
+            await card.save();
+
             resolve({
               success: true,
               requiresAction: false,
