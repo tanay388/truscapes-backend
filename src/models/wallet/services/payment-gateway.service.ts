@@ -152,7 +152,7 @@ export class PaymentGatewayService {
               currency_code: 'USD',
               value: amount.toFixed(2),
             },
-            custom_id: userId,
+            reference_id: userId,
           },
         ],
         application_context: {
