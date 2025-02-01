@@ -157,10 +157,10 @@ export class PaymentGatewayService {
         ],
         application_context: {
           return_url:
-            'https://shop.tru-scapes.com/success?session_id={CHECKOUT_SESSION_ID}&gateway=' +
+            'https://shop.tru-scapes.com/success?gateway=' +
             PaymentGateway.PAYPAL,
           cancel_url:
-            'https://shop.tru-scapes.com/cancel?session_id={CHECKOUT_SESSION_ID}&gateway=' +
+            'https://shop.tru-scapes.com/cancel?gateway=' +
             PaymentGateway.PAYPAL,
         },
       });
