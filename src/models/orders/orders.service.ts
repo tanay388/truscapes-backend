@@ -86,7 +86,9 @@ export class OrdersService {
       const total =
         parseFloat(price.toString()) * parseFloat(item.quantity.toString());
 
-      shippingCostValue = shippingCostValue + product.shippingCost;
+      shippingCostValue =
+        parseFloat(shippingCostValue.toString()) +
+        parseFloat(product.shippingCost.toString());
 
       const orderItem = new OrderItem();
       orderItem.product = product;
