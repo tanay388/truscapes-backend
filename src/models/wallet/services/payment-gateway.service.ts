@@ -183,11 +183,7 @@ export class PaymentGatewayService {
 
   private async processAuthorizeNetPayment(
     amount: number,
-    paymentData: {
-      cardNumber: string;
-      expirationDate: string;
-      cardCode: string;
-    },
+    paymentData: any,
     userId: string,
   ): Promise<PaymentResponse> {
     try {
@@ -203,7 +199,7 @@ export class PaymentGatewayService {
       const creditCard = new ApiContracts.CreditCardType();
       creditCard.setCardNumber(paymentData.cardNumber);
       creditCard.setExpirationDate(paymentData.expirationDate);
-      creditCard.setCardCode(paymentData.cardCode);
+      creditCard.setCardCode(paymentData.cvv);
 
       console.log(creditCard);
       console.log(paymentData);
@@ -255,7 +251,7 @@ export class PaymentGatewayService {
             const card = await CardInfo.create({
               cardNumber: paymentData.cardNumber,
               expirationDate: paymentData.expirationDate,
-              cvv: paymentData.cardCode,
+              cvv: paymentData.cvv,
               user: { id: userId },
             });
             await card.save();
