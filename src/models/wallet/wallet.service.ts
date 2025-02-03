@@ -58,7 +58,7 @@ export class WalletService {
 
     // Update wallet balance and credit due
     wallet.balance += amount;
-    wallet.creditDue += amount;
+    // wallet.creditDue += amount;
     await wallet.save();
 
     // Record transaction
