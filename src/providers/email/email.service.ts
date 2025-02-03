@@ -14,7 +14,7 @@ export class EmailService {
   private transporter: nodemailer.Transporter;
   private adminEmails: string[] = [
     'tanay.deo388@gmail.com',
-    'deo.tanay388@gmail.com',
+    'suhail@tru-scapes.com',
   ];
   private readonly emailStyles = `
     <style>
