@@ -126,7 +126,8 @@ export class OrdersService {
         throw new BadRequestException('Insufficient wallet balance');
       }
 
-      user.wallet.balance -= order.total;
+      user.wallet.balance -= parseFloat(order.total.toString());
+      user.wallet.creditDue += parseFloat(order.total.toString());
       await user.wallet.save();
 
       order.paymentStatus = PaymentStatus.COMPLETED;
