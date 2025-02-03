@@ -194,11 +194,11 @@ export class EmailService {
       subject: 'Your Tru-Scapes® Wallet Has Been Updated',
       html: `
         <p>Hello ${customerName},</p>
-        <p>Great news! Your Tru-Scapes® wallet was just Credited with ${amount}.</p>
+        <p>Great news! Your Tru-Scapes® wallet was just Credited with $${amount}.</p>
         <div class="details">
           <h2>Transaction details:</h2>
           <p>Type: Credit</p>
-          <p>Amount: ${amount}</p>
+          <p>Amount: $${amount}</p>
         </div>
         <p>You can review your full transaction history and wallet balance anytime from your Dashboard.</p>
         <p>If anything looks incorrect or you have questions, we're always here to help.</p>
@@ -224,7 +224,7 @@ export class EmailService {
         <div class="details">
           <h2>Payment details:</h2>
           <p>Order ID: ${orderId}</p>
-          <p>Amount Due: ${amount}</p>
+          <p>Amount Due: $${amount}</p>
         </div>
         <a href="${paymentLink}" class="button">Pay Now</a>
         <p>Once payment is completed, you'll continue enjoying all the benefits and features Tru-Scapes® has to offer. If you have any questions or concerns, simply reply to this email, and we'll be happy to assist you.</p>
@@ -245,7 +245,7 @@ export class EmailService {
       subject: `Your New Tru-Scapes® Order ${orderDetails.items[0].product.name} Is Confirmed`,
       html: `
         <p>Hello ${customerName},</p>
-        <p>Thanks for choosing Tru-Scapes®! We're excited to let you know that your order ${orderDetails.id} is confirmed and is now being processed.</p>
+        <p>Thanks for choosing Tru-Scapes®! We're excited to let you know that your order Id: #${orderDetails.id} is confirmed and is now being processed.</p>
         <div class="details">
           <h2>Order Details:</h2>
           <p>Items/Service: </p>
