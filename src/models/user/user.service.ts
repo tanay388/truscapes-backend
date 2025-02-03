@@ -94,7 +94,10 @@ export class UserService {
       wallet: { id: wallet.id },
     });
 
-    await this.emailService.sendAccountPendingEmail(fUser.email, fUser.name);
+    await this.emailService.sendAccountPendingEmail(
+      fUser.email,
+      fUser.name || fUser.email,
+    );
     await this.emailService.sendNewAccountNotificationToAdmin(fUser);
 
     return this.getProfile(fUser);
