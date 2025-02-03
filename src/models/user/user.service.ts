@@ -52,7 +52,10 @@ export class UserService {
     user.approved = true;
     await user.save();
 
-    await this.emailService.sendAccountApprovedEmail(user.email, user.name);
+    await this.emailService.sendAccountApprovedEmail(
+      user.email,
+      user.name || user.email,
+    );
 
     return user;
   }

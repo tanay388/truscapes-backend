@@ -32,6 +32,7 @@ export class EmailService {
       .logo {
         max-width: 200px;
         margin-bottom: 20px;
+        background-color: #ffffff;
       }
       h1 {
         color: #333333;
@@ -241,13 +242,21 @@ export class EmailService {
   ) {
     return this.sendEmail({
       to,
-      subject: `Your New Tru-Scapes® Order ${orderDetails.id} Is Confirmed`,
+      subject: `Your New Tru-Scapes® Order ${orderDetails.items[0].product.name} Is Confirmed`,
       html: `
         <p>Hello ${customerName},</p>
         <p>Thanks for choosing Tru-Scapes®! We're excited to let you know that your order ${orderDetails.id} is confirmed and is now being processed.</p>
         <div class="details">
           <h2>Order Details:</h2>
-          <p>Items/Service: ${orderDetails.items}</p>
+          <p>Items/Service: </p>
+          <ul>
+            ${orderDetails.items
+              .map(
+                (item: any) =>
+                  `<li>${item.product.name} (${item.quantity}) = $${item.total}</li>`,
+              )
+              .join('')}
+          </ul>
         </div>
         <p>You can view and manage your order anytime in your Order History.</p>
         <p>If you have questions, we're always just an email away!</p>
@@ -260,7 +269,7 @@ export class EmailService {
   async sendNewOrderNotificationToAdmin(orderDetails: any) {
     return this.sendEmail({
       to: this.adminEmails,
-      subject: `New Order Alert: ${orderDetails.id} by ${orderDetails.user.name}`,
+      subject: `New Order Alert: ${orderDetails.items[0].product.name} by ${orderDetails.user.name}`,
       html: `
         <p>Hello Admin,</p>
         <p>A new order has just rolled in!</p>
@@ -268,7 +277,15 @@ export class EmailService {
           <h2>Order Details:</h2>
           <p>Order ID: ${orderDetails.id}</p>
           <p>Customer: ${orderDetails.user.name} (${orderDetails.user.email})</p>
-          <p>Items/Service: ${orderDetails.items}</p>
+          <p>Items/Service:</p>
+           <ul>
+            ${orderDetails.items
+              .map(
+                (item: any) =>
+                  `<li>${item.product.name} (${item.quantity}) = $${item.total}</li>`,
+              )
+              .join('')}
+          </ul>
           <p>Date: ${new Date().toLocaleString()}</p>
         </div>
         <p>Please review and ensure everything is in motion to deliver a top-notch experience.</p>
@@ -289,12 +306,12 @@ export class EmailService {
       subject: `Update on Your Tru-Scapes® Order ${orderId}`,
       html: `
         <p>Hello ${customerName},</p>
-        <p>We've got some news about your order ${orderId}:</p>
+        <p>We've got some news about your order Id: #${orderId}:</p>
         <div class="details">
           <p>Current Status: ${newStatus}</p>
         </div>
         <p>We're working to ensure everything goes smoothly. If you have any questions or need more info, just reply to this email, and we'll be happy to help.</p>
-        <p>Track your order anytime: <a href="https://tru-scapes.com/orders">Order History</a>.</p>
+        <p>Track your order anytime: <a href="https://shop.tru-scapes.com/">Our Website</a>.</p>
         <p>Thank you,</p>
         <p>The Tru-Scapes Team</p>
       `,
@@ -311,7 +328,7 @@ export class EmailService {
       subject: `Your Tru-Scapes® Order ${orderId} Is Complete!`,
       html: `
         <p>Hello ${customerName},</p>
-        <p>Happy day! Your order ${orderId} has been successfully delivered.</p>
+        <p>Happy day! Your order Id: #${orderId} has been successfully delivered.</p>
         <p>We hope everything meets (or even exceeds) your expectations. If you love what you received, consider leaving a review to help other customers make informed decisions.</p>
         <p>Need help or have questions? Just hit reply, and we'll be there for you.</p>
         <p>Thanks for choosing Tru-Scapes®!</p>
