@@ -28,6 +28,7 @@ export class EmailService {
       .header {
         text-align: center;
         margin-bottom: 30px;
+        background-color: #ffffff;
       }
       .logo {
         max-width: 200px;
