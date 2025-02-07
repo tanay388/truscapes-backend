@@ -19,6 +19,7 @@ import { WalletModule } from './models/wallet/wallet.module';
 import { TransactionsModule } from './models/transactions/transactions.module';
 import { OrdersModule } from './models/orders/orders.module';
 import { EmailModule } from './providers/email/email.module';
+import { EmailsModule } from './models/emails/emails.module';
 
 @Module({
   imports: [
@@ -47,6 +48,7 @@ import { EmailModule } from './providers/email/email.module';
     TransactionsModule,
     OrdersModule,
     EmailModule,
+    EmailsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
