@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as nodemailer from 'nodemailer';
+import { AdminEmailEntity } from 'src/models/emails/entities/admin-email.entity';
 
 interface EmailOptions {
   to: string | string[];
@@ -12,10 +13,7 @@ interface EmailOptions {
 @Injectable()
 export class EmailService {
   private transporter: nodemailer.Transporter;
-  private adminEmails: string[] = [
-    'tanay.deo388@gmail.com',
-    'suhail@tru-scapes.com',
-  ];
+  private adminEmails: string[] = [];
   private readonly emailStyles = `
     <style>
       .email-container {
@@ -83,6 +81,14 @@ export class EmailService {
           this.configService.get<string>('SMTP_PASSWORD'),
       },
     });
+
+    this.loadadminEmails();
+  }
+
+  private async loadadminEmails() {
+    const emails = await AdminEmailEntity.find();
+
+    this.adminEmails = emails.map((email) => email.email);
   }
 
   private wrapInTemplate(content: string): string {
