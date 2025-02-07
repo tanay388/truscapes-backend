@@ -67,6 +67,7 @@ export class ProductsService {
         ...(categoryId && { category: { id: categoryId } }),
         state: state ? state : ProductStatus.ACTIVE,
       },
+      order: { categoryIndex: 'ASC', index: 'ASC', createdAt: 'DESC' },
       take: take,
       skip: skip,
     });

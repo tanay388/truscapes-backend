@@ -54,6 +54,11 @@ export class UserController {
     return this.userService.approveSingleUser(id, user.uid);
   }
 
+  @Post('users/:id/admin')
+  makeadmin(@Param('id') id: string, @FUser() user: FirebaseUser) {
+    return this.userService.approveSingleUser(id, user.uid);
+  }
+
   @Post('users/:id/block')
   blockSingleUser(@Param('id') id: string, @FUser() user: FirebaseUser) {
     return this.userService.blockSingleUser(id, user.uid);

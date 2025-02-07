@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { UpdateUserDto } from './dto/update-user.dto';
-import { User } from './entities/user.entity';
+import { User, UserRole } from './entities/user.entity';
 import { FirebaseUser } from '../../providers/firebase/firebase.service';
 import { UploaderService } from '../../providers/uploader/uploader.service';
 import { NotificationService } from 'src/providers/notification/notification.service';
@@ -57,6 +57,13 @@ export class UserService {
       user.name || user.email,
     );
 
+    return user;
+  }
+
+  async makeadmin(userId: string, adminId: string) {
+    const user = await User.findOne({ where: { id: userId } });
+    user.role = UserRole.ADMIN;
+    await user.save();
     return user;
   }
 
