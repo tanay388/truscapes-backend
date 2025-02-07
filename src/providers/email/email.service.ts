@@ -97,7 +97,7 @@ export class EmailService {
         <body>
           <div class="email-container">
             <div class="header">
-              <img src="https://tru-scapes.com/wp-content/uploads/2023/12/truscapes-lighting-logo-2048x598.png.webp" alt="Tru-Scapes Logo" class="logo">
+              <img src="https://tru-scapes.com/wp-content/uploads/2023/12/site-logo.png.webp" alt="Tru-Scapes Logo" class="logo">
             </div>
             ${content}
             <div class="footer">
