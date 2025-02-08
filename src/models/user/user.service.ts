@@ -7,6 +7,7 @@ import { NotificationService } from 'src/providers/notification/notification.ser
 import { Pagination } from 'src/common/dtos/pagination.dto';
 import { Wallet } from '../wallet/entities/wallet.entity';
 import { EmailService } from 'src/providers/email/email.service';
+import { AdminEmailEntity } from '../emails/entities/admin-email.entity';
 
 @Injectable()
 export class UserService {
@@ -105,6 +106,10 @@ export class UserService {
       fUser.email,
       fUser.name || fUser.email,
     );
+    const emails = await AdminEmailEntity.find();
+
+    this.emailService.loadadminEmails(emails.map((email) => email.email));
+
     await this.emailService.sendNewAccountNotificationToAdmin(fUser);
 
     return this.getProfile(fUser);

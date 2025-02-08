@@ -5,6 +5,7 @@ import { Transaction, TransactionType } from './entities/transaction.entity';
 import { User } from '../user/entities/user.entity';
 import { Pagination } from 'src/common/dtos/pagination.dto';
 import { EmailService } from 'src/providers/email/email.service';
+import { AdminEmailEntity } from '../emails/entities/admin-email.entity';
 
 @Injectable()
 export class TransactionsService {

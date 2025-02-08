@@ -39,7 +39,6 @@ import { EmailsModule } from './models/emails/emails.module';
     FirebaseModule,
     AppCacheModule,
     NotificationModule,
-    EmailModule,
     UserModule,
     ProductsModule,
     CategoryModule,

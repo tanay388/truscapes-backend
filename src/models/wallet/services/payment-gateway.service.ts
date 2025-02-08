@@ -28,6 +28,7 @@ import {
 } from 'src/models/orders/entities/order.entity';
 import { EmailService } from 'src/providers/email/email.service';
 import { CardInfo } from '../entities/card.entity';
+import { AdminEmailEntity } from 'src/models/emails/entities/admin-email.entity';
 
 interface PaymentResponse {
   success: boolean;
@@ -57,6 +58,13 @@ export class PaymentGatewayService {
     );
 
     this.paypalClient = new paypal.core.PayPalHttpClient(environment);
+
+    this.loadmails();
+  }
+
+  async loadmails() {
+    // const emails = await AdminEmailEntity.find();
+    // this.emailService.loadadminEmails(emails.map((email) => email.email));
   }
 
   async processPayment(
@@ -331,6 +339,10 @@ export class PaymentGatewayService {
             order.user.name,
             order,
           );
+          const emails = await AdminEmailEntity.find();
+
+          this.emailService.loadadminEmails(emails.map((email) => email.email));
+
           await this.emailService.sendNewOrderNotificationToAdmin(order);
           return {
             success: true,

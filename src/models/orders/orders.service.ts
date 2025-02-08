@@ -19,6 +19,7 @@ import {
   TransactionType,
 } from '../transactions/entities/transaction.entity';
 import { EmailService } from 'src/providers/email/email.service';
+import { AdminEmailEntity } from '../emails/entities/admin-email.entity';
 
 @Injectable()
 export class OrdersService {
@@ -142,6 +143,10 @@ export class OrdersService {
       transaction.description = `Order #${order.id}`;
 
       await transaction.save();
+
+      const emails = await AdminEmailEntity.find();
+
+      this.emailService.loadadminEmails(emails.map((email) => email.email));
 
       await this.emailService.sendOrderConfirmationEmail(
         order.user.email,
@@ -270,6 +275,9 @@ export class OrdersService {
     }
 
     await order.save();
+    const emails = await AdminEmailEntity.find();
+
+    this.emailService.loadadminEmails(emails.map((email) => email.email));
 
     // Send notification to user
     if (order.status != OrderStatus.DELIVERED)

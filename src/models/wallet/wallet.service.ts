@@ -16,6 +16,7 @@ import {
 import { User } from '../user/entities/user.entity';
 import { PaymentGatewayService } from './services/payment-gateway.service';
 import { EmailService } from 'src/providers/email/email.service';
+import { AdminEmailEntity } from '../emails/entities/admin-email.entity';
 
 @Injectable()
 export class WalletService {

@@ -82,13 +82,12 @@ export class EmailService {
       },
     });
 
-    this.loadadminEmails();
+    // this.loadadminEmails();
   }
 
-  private async loadadminEmails() {
-    const emails = await AdminEmailEntity.find();
-
-    this.adminEmails = emails.map((email) => email.email);
+  public async loadadminEmails(emails: string[]) {
+    // const emails = await AdminEmailEntity.find();
+    this.adminEmails = emails;
   }
 
   private wrapInTemplate(content: string): string {
