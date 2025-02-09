@@ -56,7 +56,7 @@ export class UserController {
 
   @Post('admin/:id')
   makeadmin(@Param('id') id: string, @FUser() user: FirebaseUser) {
-    return this.userService.approveSingleUser(id, user.uid);
+    return this.userService.makeadmin(id, user.uid);
   }
 
   @Post('users/:id/block')
