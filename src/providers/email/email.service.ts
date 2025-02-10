@@ -101,9 +101,7 @@ export class EmailService {
         </head>
         <body>
           <div class="email-container">
-            <div class="header">
-              <img src="https://tru-scapes.com/wp-content/uploads/2023/12/site-logo.png.webp" alt="Tru-Scapes Logo" class="logo">
-            </div>
+            
             ${content}
             <div class="footer">
               <p>© ${new Date().getFullYear()} Tru-Scapes®. All rights reserved.</p>
