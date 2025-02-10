@@ -112,6 +112,10 @@ export class EmailService {
     `;
   }
 
+  // <div class="header">
+  //             <img src="https://tru-scapes.com/wp-content/uploads/2023/12/site-logo.png.webp" alt="Tru-Scapes Logo" class="logo">
+  //           </div>
+
   async sendEmail({ to, cc, subject, html }: EmailOptions) {
     try {
       const mailOptions: nodemailer.SendMailOptions = {
