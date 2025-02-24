@@ -1,4 +1,4 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsEnum, IsOptional, IsString } from 'class-validator';
 import { OrderStatus } from '../entities/order.entity';
 
@@ -13,8 +13,8 @@ export class UpdateOrderDto {
   @IsOptional()
   trackingNumber?: string;
 
-  @ApiProperty()
-  @IsString()
+  @ApiPropertyOptional({ required: false })
   @IsOptional()
-  notes?: string;
+  @IsString()
+  adminNotes?: string;
 }

@@ -314,8 +314,8 @@ export class OrdersService {
     if (updateOrderDto.trackingNumber) {
       order.trackingNumber = updateOrderDto.trackingNumber;
     }
-    if (updateOrderDto.notes) {
-      order.notes = updateOrderDto.notes;
+    if (updateOrderDto.adminNotes) {
+      order.adminNotes = updateOrderDto.adminNotes;
     }
 
     await order.save();

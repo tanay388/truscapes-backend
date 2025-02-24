@@ -28,23 +28,23 @@ export class Order extends BaseClassEntity {
   @JoinColumn()
   user: User;
 
-  @OneToMany(() => OrderItem, item => item.order, { 
+  @OneToMany(() => OrderItem, (item) => item.order, {
     cascade: true,
-    eager: true 
+    eager: true,
   })
   items: OrderItem[];
 
   @Column({
     type: 'enum',
     enum: OrderStatus,
-    default: OrderStatus.PENDING
+    default: OrderStatus.PENDING,
   })
   status: OrderStatus;
 
   @Column({
     type: 'enum',
     enum: PaymentStatus,
-    default: PaymentStatus.PENDING
+    default: PaymentStatus.PENDING,
   })
   paymentStatus: PaymentStatus;
 
@@ -75,4 +75,7 @@ export class Order extends BaseClassEntity {
 
   @Column({ type: 'text', nullable: true })
   notes: string;
+
+  @Column({ type: 'text', nullable: true })
+  adminNotes: string;
 }

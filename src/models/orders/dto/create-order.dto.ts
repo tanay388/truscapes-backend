@@ -1,14 +1,14 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { 
-  IsArray, 
-  IsEnum, 
-  IsNotEmpty, 
-  IsNumber, 
-  IsObject, 
-  IsOptional, 
-  IsString, 
-  ValidateNested 
+import {
+  IsArray,
+  IsEnum,
+  IsNotEmpty,
+  IsNumber,
+  IsObject,
+  IsOptional,
+  IsString,
+  ValidateNested,
 } from 'class-validator';
 import { PaymentGateway } from 'src/models/wallet/dto/repay-dues.dto';
 
@@ -93,6 +93,8 @@ export class CreateOrderDto {
   @IsString()
   notes?: string;
 
+
+
   @ApiPropertyOptional({ type: CardInfo, required: false })
   @IsOptional()
   @IsObject()
@@ -100,7 +102,7 @@ export class CreateOrderDto {
   @Type(() => CardInfo)
   cardInfo?: CardInfo;
 
-  @ApiProperty({ required: true})
+  @ApiProperty({ required: true })
   @IsNotEmpty()
   @IsEnum(PaymentGateway)
   gateway: PaymentGateway;
