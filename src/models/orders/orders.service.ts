@@ -229,6 +229,7 @@ export class OrdersService {
   async findAll(pagination: Pagination) {
     const { take = 10, skip = 0 } = pagination;
     return await Order.find({
+      relations: ['user', 'items'],
       take,
       skip,
       order: { createdAt: 'DESC' },
@@ -248,11 +249,39 @@ export class OrdersService {
   async findOne(id: number, userId: string) {
     const order = await Order.findOne({
       where: { id },
+      relations: {
+        items: {
+          product: true,
+          variant: true,
+        },
+      },
+      withDeleted: true, // This enables including soft deleted records
+      relationLoadStrategy: 'query',
+      loadRelationIds: false,
     });
 
     if (!order) {
       throw new NotFoundException('Order not found');
     }
+
+    // Transform the items to ensure deleted products/variants are included
+    // for (const item of order.items) {
+    //   // Load product with deleted
+    //   if (item.productId) {
+    //     item.product = await Product.findOne({
+    //       where: { id: item.productId },
+    //       withDeleted: true,
+    //     });
+    //   }
+
+    //   // Load variant with deleted
+    //   if (item.variantId) {
+    //     item.variant = await ProductVariant.findOne({
+    //       where: { id: item.variantId },
+    //       withDeleted: true,
+    //     });
+    //   }
+    // }
 
     return order;
   }
