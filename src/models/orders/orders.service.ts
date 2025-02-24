@@ -229,7 +229,14 @@ export class OrdersService {
   async findAll(pagination: Pagination) {
     const { take = 10, skip = 0 } = pagination;
     return await Order.find({
-      relations: ['user', 'items'],
+      relations: {
+        items: {
+          product: true,
+          variant: true,
+        },
+      },
+      withDeleted: true, // This enables including soft deleted records
+      relationLoadStrategy: 'query',
       take,
       skip,
       order: { createdAt: 'DESC' },
@@ -240,6 +247,14 @@ export class OrdersService {
     const { take = 10, skip = 0 } = pagination;
     return await Order.find({
       where: { user: { id: userId } },
+      relations: {
+        items: {
+          product: true,
+          variant: true,
+        },
+      },
+      withDeleted: true, // This enables including soft deleted records
+      relationLoadStrategy: 'query',
       take,
       skip,
       order: { createdAt: 'DESC' },
