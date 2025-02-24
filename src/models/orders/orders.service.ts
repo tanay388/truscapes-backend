@@ -302,7 +302,17 @@ export class OrdersService {
   }
 
   async update(id: number, updateOrderDto: UpdateOrderDto, adminId: string) {
-    const order = await Order.findOne({ where: { id } });
+    const order = await Order.findOne({
+      where: { id },
+      relations: {
+        items: {
+          product: true,
+          variant: true,
+        },
+      },
+      withDeleted: true, // This enables including soft deleted records
+      relationLoadStrategy: 'query',
+    });
     if (!order) {
       throw new NotFoundException('Order not found');
     }
