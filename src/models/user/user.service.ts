@@ -127,6 +127,7 @@ export class UserService {
       company,
       companyAddress,
       companyWebsite,
+      role,
     }: UpdateUserDto,
     photo?: Express.Multer.File,
   ) {
@@ -149,6 +150,7 @@ export class UserService {
       country,
       companyAddress,
       companyWebsite,
+      role,
     });
 
     return this.getProfile(fUser);
