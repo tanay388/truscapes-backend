@@ -29,6 +29,14 @@ export class OrdersService {
     private readonly emailService: EmailService,
   ) {}
 
+  calculateShipping = (subtotal: number) => {
+    if (subtotal >= 2500) {
+      return 0; // Free shipping for orders $2500 and above
+    }
+    return subtotal * 0.15; // 15% shipping for orders under $2500
+  };
+
+
   getRoleBasedPrice(product: Product, variant: ProductVariant, user: User) {
     switch (user.role) {
       case UserRole.DEALER:
@@ -105,7 +113,7 @@ export class OrdersService {
     }
 
     // Calculate shipping cost (you can implement your own logic)
-    const shippingCost = shippingCostValue; // Default shipping cost
+    const shippingCost = this.calculateShipping(subtotal); // Default shipping cost
 
     console.log('subtotal' + ' ' + subtotal);
     console.log('shippingCost' + ' ' + shippingCost);
