@@ -119,7 +119,7 @@ export class EmailService {
   async sendEmail({ to, cc, subject, html }: EmailOptions) {
     try {
       const mailOptions: nodemailer.SendMailOptions = {
-        from: this.configService.get<string>('SMTP_USER'),
+        from: `Tru-Scapes® <${process.env.SMTP_USER || this.configService.get<string>('SMTP_USER')}>`,
         to,
         cc,
         subject,
