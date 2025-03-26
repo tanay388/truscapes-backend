@@ -3,8 +3,6 @@ import {
   NotFoundException,
   BadRequestException,
 } from '@nestjs/common';
-import { CreateWalletDto } from './dto/create-wallet.dto';
-import { UpdateWalletDto } from './dto/update-wallet.dto';
 import { CreditWalletDto } from './dto/credit-wallet.dto';
 import { RepayDuesDto, PaymentGateway } from './dto/repay-dues.dto';
 import { Wallet } from './entities/wallet.entity';
@@ -16,7 +14,6 @@ import {
 import { User } from '../user/entities/user.entity';
 import { PaymentGatewayService } from './services/payment-gateway.service';
 import { EmailService } from 'src/providers/email/email.service';
-import { AdminEmailEntity } from '../emails/entities/admin-email.entity';
 
 @Injectable()
 export class WalletService {
@@ -141,5 +138,25 @@ export class WalletService {
       sessionId,
       paymentGateway,
     );
+  }
+
+  async requestClearDue(userId: string) {
+    const wallet = await this.findOne(userId);
+    const user = await User.findOne({ where: { id: userId } });
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    wallet.creditDue = 0;
+    await wallet.save();
+
+    await this.emailService.sendPaymentRequestEmail(
+      user.email,
+      user.name,
+      wallet.creditDue,
+      'https://shop.tru-scapes.com/profile',
+    );
+
+    return { message: 'Credit due has been cleared' };
   }
 }

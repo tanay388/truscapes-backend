@@ -20,6 +20,8 @@ import {
 } from '../transactions/entities/transaction.entity';
 import { EmailService } from 'src/providers/email/email.service';
 import { AdminEmailEntity } from '../emails/entities/admin-email.entity';
+import { Cron, CronExpression } from '@nestjs/schedule';
+import { LessThan } from 'typeorm';
 
 @Injectable()
 export class OrdersService {
@@ -35,7 +37,6 @@ export class OrdersService {
     }
     return subtotal * 0.15; // 15% shipping for orders under $2500
   };
-
 
   getRoleBasedPrice(product: Product, variant: ProductVariant, user: User) {
     switch (user.role) {
@@ -358,5 +359,20 @@ export class OrdersService {
       );
 
     return order;
+  }
+
+  @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
+  async handlePaymentPendingOrders() {
+    const orders = await Order.find({
+      where: {
+        status: OrderStatus.PAYMENT_PENDING,
+        createdAt: LessThan(new Date(Date.now() - 1000 * 60 * 60 * 24)),
+      },
+    });
+
+    for (const order of orders) {
+      order.status = OrderStatus.FAILED;
+      await order.save();
+    }
   }
 }

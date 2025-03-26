@@ -28,20 +28,19 @@ export class WalletController {
   @Post('repay-dues')
   @ApiOperation({
     summary: 'Repay credit dues using a payment gateway',
-    description: 'Process payment to repay credit dues using PayPal, Authorize.net, or Stripe'
+    description:
+      'Process payment to repay credit dues using PayPal, Authorize.net, or Stripe',
   })
-  repayDues(
-    @FUser() user: FirebaseUser,
-    @Body() repayDuesDto: RepayDuesDto,
-  ) {
+  repayDues(@FUser() user: FirebaseUser, @Body() repayDuesDto: RepayDuesDto) {
     return this.walletService.repayDues(user.uid, repayDuesDto);
   }
 
   @Post(':userId/credit')
   @AdminOnly()
-  @ApiOperation({ 
+  @ApiOperation({
     summary: 'Add credit to wallet (Admin only)',
-    description: 'Adds credit to user wallet that needs to be paid back. Updates both balance and credit due.'
+    description:
+      'Adds credit to user wallet that needs to be paid back. Updates both balance and credit due.',
   })
   creditWallet(
     @Param('userId') userId: string,
@@ -49,6 +48,17 @@ export class WalletController {
     @FUser() admin: FirebaseUser,
   ) {
     return this.walletService.creditWallet(userId, creditWalletDto, admin.uid);
+  }
+
+  @Post(':userId/request-clear-due')
+  @AdminOnly()
+  @ApiOperation({
+    summary: 'Repay due from wallet (Admin only)',
+    description:
+      'Repays due from user wallet. Updates both balance and credit due.',
+  })
+  requestClearDue(@Param('userId') userId: string) {
+    return this.walletService.requestClearDue(userId);
   }
 
   @Get(':userId')

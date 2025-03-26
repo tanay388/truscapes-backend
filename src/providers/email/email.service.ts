@@ -219,7 +219,6 @@ export class EmailService {
   async sendPaymentRequestEmail(
     to: string,
     customerName: string,
-    orderId: string,
     amount: number,
     paymentLink: string,
   ) {
@@ -231,7 +230,6 @@ export class EmailService {
         <p>We hope you've been enjoying Tru-Scapes®! Earlier, we provided a temporary credit to your Tru-Scapes® wallet to help you get started with your orders. Now that the agreed-upon period has passed, we kindly request that you settle the remaining amount.</p>
         <div class="details">
           <h2>Payment details:</h2>
-          <p>Order ID: ${orderId}</p>
           <p>Amount Due: $${amount}</p>
         </div>
         <a href="${paymentLink}" class="button">Pay Now</a>
