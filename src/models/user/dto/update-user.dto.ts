@@ -19,6 +19,7 @@ export class UpdateUserDto {
   @IsOptional()
   @IsString()
   lastName?: string;
+  
 
   @ApiProperty({ description: 'User\'s phone number', example: '+1234567890' })
   @IsString()
@@ -49,7 +50,7 @@ export class UpdateUserDto {
   @IsString()
   @IsOptional()
   zip?: string;
-  
+
   @ApiPropertyOptional({description: 'User\'s additional details', example: 'Some details'})
   @IsString()
   @IsOptional()
