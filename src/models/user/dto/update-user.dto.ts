@@ -1,4 +1,4 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsEmail,
   IsEnum,
@@ -14,6 +14,11 @@ export class UpdateUserDto {
   @IsOptional()
   @IsString()
   name?: string;
+
+  @ApiPropertyOptional({description: 'User\'s lastName', example: 'Doe'})
+  @IsOptional()
+  @IsString()
+  lastName?: string;
 
   @ApiProperty({ description: 'User\'s phone number', example: '+1234567890' })
   @IsString()
@@ -39,6 +44,16 @@ export class UpdateUserDto {
   @IsString()
   @IsOptional()
   company?: string;
+
+  @ApiPropertyOptional({description: 'User\'s zip code', example: '12345'})
+  @IsString()
+  @IsOptional()
+  zip?: string;
+  
+  @ApiPropertyOptional({description: 'User\'s additional details', example: 'Some details'})
+  @IsString()
+  @IsOptional()
+  additionalDetails?: string;
 
   @ApiProperty({ description: 'Company website URL', example: 'https://www.acme.com' })
   @IsString()

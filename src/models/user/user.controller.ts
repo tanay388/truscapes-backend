@@ -10,7 +10,10 @@ import {
   Post,
   Param,
   Query,
+  Res,
 } from '@nestjs/common';
+import * as XLSX from 'xlsx';
+import { Response } from 'express';
 import { UserService } from './user.service';
 import { FirebaseSecure } from './decorator/firebase.secure.decorator';
 import { FirebaseUser } from '../../providers/firebase/firebase.service';
@@ -26,6 +29,7 @@ import {
 } from '@nestjs/swagger';
 import { Gender } from './entities/user.entity';
 import { Pagination } from 'src/common/dtos/pagination.dto';
+import { Public } from './decorator/public.decorator';
 
 @FirebaseSecure()
 @ApiTags('User Controller')
@@ -108,6 +112,40 @@ export class UserController {
     @Headers('notification-token') token: string | undefined,
   ) {
     return this.userService.updateFirebaseToken(user, token, isShop);
+  }
+
+  @Get('export/excel')
+  @Public()
+  @ApiOperation({ summary: 'Export users data as Excel file' })
+  async exportUsersToExcel(@Res() res: Response) {
+    const users = await this.userService.getUsers({ take: 1000, skip: 0 });
+    
+    const workbook = XLSX.utils.book_new();
+    const worksheet = XLSX.utils.json_to_sheet(users.map(user => ({
+      ID: user.id,
+      Name: user.name,
+      Email: user.email,
+      Phone: user.phone,
+      Role: user.role,
+      Approved: user.approved ? 'Yes' : 'No',
+      Country: user.country,
+      City: user.city,
+      Company: user.company,
+      Company_Address: user.companyAddress,
+      Company_Website: user.companyWebsite,
+      Photo: user.photo,
+      Created: user.createdAt
+    })));
+
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Users');
+    const excelBuffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+
+    res.set({
+      'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'Content-Disposition': `attachment; filename=users_${Date.now().toString()}.xlsx`,
+    });
+
+    return res.send(excelBuffer);
   }
 
   @Delete('/')

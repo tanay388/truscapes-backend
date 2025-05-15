@@ -128,6 +128,9 @@ export class UserService {
       companyAddress,
       companyWebsite,
       role,
+      zip,
+      additionalDetails,
+      lastName
     }: UpdateUserDto,
     photo?: Express.Multer.File,
   ) {
@@ -151,6 +154,9 @@ export class UserService {
       companyAddress,
       companyWebsite,
       role,
+      zip,
+      additionalDetails,
+      lastName
     });
 
     return this.getProfile(fUser);

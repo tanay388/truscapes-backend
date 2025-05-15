@@ -53,6 +53,9 @@ export class User extends BaseEntity {
   @Column({ nullable: true })
   name: string;
 
+  @Column({ nullable: true})
+  lastName: string;
+
   @Column({ nullable: true })
   photo: string;
 
@@ -70,6 +73,12 @@ export class User extends BaseEntity {
 
   @Column({ nullable: true })
   city: string;
+
+  @Column({nullable: true})
+  zip: string;
+
+  @Column({nullable: true})
+  additionalDetails: string;
 
   @Column({ nullable: true })
   company: string;
