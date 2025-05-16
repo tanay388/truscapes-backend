@@ -141,7 +141,23 @@ export class UserService {
       path = await this.uploader.uploadFile(photo, 'users/' + uid);
     }
 
-    console.log(zip)
+    console.log({
+      photo: path,
+      name,
+      gender,
+      birthDate,
+      email,
+      phone,
+      company,
+      city,
+      country,
+      companyAddress,
+      companyWebsite,
+      role,
+      zip,
+      additionalDetails,
+      lastName
+    })
 
     await User.update(uid, {
       photo: path,
