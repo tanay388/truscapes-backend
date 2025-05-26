@@ -30,6 +30,8 @@ import {
 import { Gender } from './entities/user.entity';
 import { Pagination } from 'src/common/dtos/pagination.dto';
 import { Public } from './decorator/public.decorator';
+import { AdminOnly } from './decorator/admin-only.decorator';
+import { SearchUserDto } from './dto/search-user.dto';
 
 @FirebaseSecure()
 @ApiTags('User Controller')
@@ -49,8 +51,9 @@ export class UserController {
   }
 
   @Get('users')
-  getUsers(@Query() pagination: Pagination) {
-    return this.userService.getUsers(pagination);
+  @AdminOnly()
+  getUsers(@Query() searchDto: SearchUserDto) {
+    return this.userService.getUsers(searchDto);
   }
 
   @Post('users/:id/approve')
@@ -76,26 +79,6 @@ export class UserController {
   @Patch('/')
   @ApiOperation({ summary: 'Update user profile' })
   @ApiConsumes('multipart/form-data')
-  @ApiBody({
-    schema: {
-      type: 'object',
-      properties: {
-        name: { type: 'string', nullable: true },
-        birthDate: { type: 'string', format: 'date-time', nullable: true },
-        gender: {
-          type: 'string',
-          enum: Object.values(Gender),
-          nullable: true,
-        },
-        phone: { type: 'string', nullable: true },
-        photo: {
-          type: 'string',
-          format: 'binary',
-          nullable: true,
-        },
-      },
-    },
-  })
   @UseInterceptors(FileInterceptor('photo'))
   async updateProfile(
     @FUser() user: FirebaseUser,
@@ -115,7 +98,7 @@ export class UserController {
   }
 
   @Get('export/excel')
-  @Public()
+  @AdminOnly()
   @ApiOperation({ summary: 'Export users data as Excel file' })
   async exportUsersToExcel(@Res() res: Response) {
     const users = await this.userService.getUsers({ take: 1000, skip: 0 });

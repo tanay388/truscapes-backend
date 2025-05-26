@@ -8,6 +8,8 @@ import { Pagination } from 'src/common/dtos/pagination.dto';
 import { Wallet } from '../wallet/entities/wallet.entity';
 import { EmailService } from 'src/providers/email/email.service';
 import { AdminEmailEntity } from '../emails/entities/admin-email.entity';
+import { Like } from 'typeorm';
+import { SearchUserDto } from './dto/search-user.dto';
 
 @Injectable()
 export class UserService {
@@ -36,10 +38,16 @@ export class UserService {
     return user;
   }
 
-  async getUsers(pagination: Pagination) {
+  async getUsers(searchDto: SearchUserDto) {
+    const query = searchDto.query ? `%${searchDto.query}%` : null;
+    
     const users = await User.find({
-      take: pagination.take,
-      skip: pagination.skip,
+      where: query ? [
+        { name: Like(query) },
+        { email: Like(query) }
+      ] : {},
+      take: searchDto.take,
+      skip: searchDto.skip,
       order: {
         createdAt: 'DESC',
       },
