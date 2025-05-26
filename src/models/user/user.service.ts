@@ -40,12 +40,27 @@ export class UserService {
 
   async getUsers(searchDto: SearchUserDto) {
     const query = searchDto.query ? `%${searchDto.query}%` : null;
+    const whereConditions: any = {};
+    
+    if (searchDto.role) {
+      whereConditions.role = searchDto.role;
+    }
+    
+    if (searchDto.approved) {
+      if (searchDto.approved === 'approved') {
+        whereConditions.approved = true;
+      } else if (searchDto.approved === 'unapproved') {
+        whereConditions.approved = false;
+      }
+    }
     
     const users = await User.find({
-      where: query ? [
-        { name: Like(query) },
-        { email: Like(query) }
-      ] : {},
+      where: query
+        ? [
+            { ...whereConditions, name: Like(query) },
+            { ...whereConditions, email: Like(query) }
+          ]
+        : whereConditions,
       take: searchDto.take,
       skip: searchDto.skip,
       order: {
