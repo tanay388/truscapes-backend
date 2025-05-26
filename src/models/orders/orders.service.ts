@@ -3,6 +3,7 @@ import {
   NotFoundException,
   BadRequestException,
 } from '@nestjs/common';
+import { OrderFilterDto } from './dto/order-filter.dto';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderDto } from './dto/update-order.dto';
 import { Order, OrderStatus, PaymentStatus } from './entities/order.entity';
@@ -235,21 +236,55 @@ export class OrdersService {
     return order;
   }
 
-  async findAll(pagination: Pagination) {
+  async findAll(pagination: Pagination, filter: OrderFilterDto) {
     const { take = 10, skip = 0 } = pagination;
-    return await Order.find({
-      relations: {
-        items: {
-          product: true,
-          variant: true,
+    const query = Order.createQueryBuilder('order')
+      .leftJoinAndSelect('order.user', 'user')
+      .leftJoinAndSelect('order.items', 'items')
+      .leftJoinAndSelect('items.product', 'product')
+      .leftJoinAndSelect('items.variant', 'variant');
+
+    try {
+      // Apply filters if they exist
+      if (filter?.status) {
+        query.andWhere('order.status = :status', { status: filter.status });
+      }
+
+      if (filter?.minAmount) {
+        query.andWhere('order.total >= :minAmount', { minAmount: filter.minAmount });
+      }
+
+      if (filter?.maxAmount) {
+        query.andWhere('order.total <= :maxAmount', { maxAmount: filter.maxAmount });
+      }
+
+      if (filter?.startDate) {
+        query.andWhere('order.createdAt >= :startDate', { startDate: filter.startDate });
+      }
+
+      if (filter?.endDate) {
+        query.andWhere('order.createdAt <= :endDate', { endDate: filter.endDate });
+      }
+
+      // Add pagination and ordering
+      query
+        .orderBy('order.createdAt', 'DESC')
+        .skip(skip)
+        .take(take);
+
+      const [orders, total] = await query.getManyAndCount();
+
+      return {
+        data: orders,
+        meta: {
+          total,
+          skip,
+          take,
         },
-      },
-      withDeleted: true, // This enables including soft deleted records
-      relationLoadStrategy: 'query',
-      take,
-      skip,
-      order: { createdAt: 'DESC' },
-    });
+      };
+    } catch (error) {
+      throw new BadRequestException('Failed to fetch orders: ' + error.message);
+    }
   }
 
   async findUserOrders(userId: string, pagination: Pagination) {

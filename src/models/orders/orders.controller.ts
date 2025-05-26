@@ -17,6 +17,7 @@ import { FUser } from '../user/decorator/firebase.user.decorator';
 import { FirebaseUser } from 'src/providers/firebase/firebase.service';
 import { AdminOnly } from '../user/decorator/admin-only.decorator';
 import { Pagination } from 'src/common/dtos/pagination.dto';
+import { OrderFilterDto } from './dto/order-filter.dto';
 
 @ApiTags('Orders')
 @Controller('orders')
@@ -49,8 +50,8 @@ export class OrdersController {
   @Get()
   @AdminOnly()
   @ApiOperation({ summary: 'Get all orders (Admin only)' })
-  findAll(@Query() pagination: Pagination) {
-    return this.ordersService.findAll(pagination);
+  findAll(@Query() pagination: Pagination, @Query() filter: OrderFilterDto) {
+    return this.ordersService.findAll(pagination, filter);
   }
 
   @Get('user/:userId')
