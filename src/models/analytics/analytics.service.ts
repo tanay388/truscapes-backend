@@ -98,7 +98,7 @@ export class AnalyticsService {
       if (type === 'count') {
         acc[date] += 1;
       } else {
-        acc[date] += order.total;
+        acc[date] = parseFloat(acc[date].toString()) + parseFloat(order.total.toString());
       }
       return acc;
     }, {});
