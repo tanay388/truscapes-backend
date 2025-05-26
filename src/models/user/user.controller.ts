@@ -135,4 +135,11 @@ export class UserController {
   deleteProfile(@FUser('uid') uid: string) {
     return this.userService.deleteProfile(uid);
   }
+
+  @Delete('/:id')
+  @AdminOnly()
+  @ApiOperation({ summary: 'Delete user (Admin only)' })
+  deleteUser(@Param('id') userId: string, @FUser() admin: FirebaseUser) {
+    return this.userService.deleteUser(userId, admin.uid);
+  }
 }

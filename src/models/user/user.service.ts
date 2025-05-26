@@ -1,10 +1,9 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { User, UserRole } from './entities/user.entity';
-import { FirebaseUser } from '../../providers/firebase/firebase.service';
+import { FirebaseService, FirebaseUser } from '../../providers/firebase/firebase.service';
 import { UploaderService } from '../../providers/uploader/uploader.service';
 import { NotificationService } from 'src/providers/notification/notification.service';
-import { Pagination } from 'src/common/dtos/pagination.dto';
 import { Wallet } from '../wallet/entities/wallet.entity';
 import { EmailService } from 'src/providers/email/email.service';
 import { AdminEmailEntity } from '../emails/entities/admin-email.entity';
@@ -14,11 +13,42 @@ import { SearchUserDto } from './dto/search-user.dto';
 @Injectable()
 export class UserService {
   constructor(
-    // private analyticsService: AnalyticsService,
     private uploader: UploaderService,
     private notificationService: NotificationService,
     private emailService: EmailService,
+    private firebaseService: FirebaseService,
   ) {}
+
+  async deleteUser(userId: string, adminId: string) {
+    const user = await User.findOne({ where: { id: userId } });
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    try {
+      // Delete user from Firebase
+      await this.firebaseService.auth.deleteUser(userId);
+
+      // Update user data in database with dummy values
+      await User.update(userId, {
+        name: 'Deleted User',
+        email: `${userId}@deleteduser.com`,
+        phone: 'Deleted',
+        company: 'Deleted Company',
+        companyAddress: 'Deleted Address',
+        companyWebsite: 'Deleted Website',
+        city: 'Deleted',
+        country: 'Deleted',
+        photo: null,
+        approved: false,
+        deletedAt: new Date()
+      });
+
+      return { message: 'User deleted successfully' };
+    } catch (error) {
+      throw new BadRequestException(`Failed to delete user: ${error.message}`);
+    }
+  }
 
   updateToken(uid: string, token: string) {
     return this.notificationService.updateToken(uid, token);
