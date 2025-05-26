@@ -274,14 +274,7 @@ export class OrdersService {
 
       const [orders, total] = await query.getManyAndCount();
 
-      return {
-        data: orders,
-        meta: {
-          total,
-          skip,
-          take,
-        },
-      };
+      return orders;
     } catch (error) {
       throw new BadRequestException('Failed to fetch orders: ' + error.message);
     }
