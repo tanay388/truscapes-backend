@@ -20,6 +20,7 @@ import { TransactionsModule } from './models/transactions/transactions.module';
 import { OrdersModule } from './models/orders/orders.module';
 import { EmailModule } from './providers/email/email.module';
 import { EmailsModule } from './models/emails/emails.module';
+import { AnalyticsModule } from './models/analytics/analytics.module';
 
 @Module({
   imports: [
@@ -48,6 +49,7 @@ import { EmailsModule } from './models/emails/emails.module';
     OrdersModule,
     EmailModule,
     EmailsModule,
+    AnalyticsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
