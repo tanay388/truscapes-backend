@@ -7,7 +7,7 @@ import {
   IsNumber,
   IsUUID,
 } from 'class-validator';
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
 
 export class CreateProductDto {
@@ -98,4 +98,12 @@ export class CreateProductDto {
   @IsArray()
   @IsOptional()
   images?: string[];
+
+  @ApiPropertyOptional({
+    description: 'Case Size of the product',
+  })
+  @IsNumber()
+  @IsOptional()
+  @Transform(({ value }) => Number(value))
+  caseSize?: number;
 }

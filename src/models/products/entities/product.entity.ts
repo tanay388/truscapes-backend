@@ -39,11 +39,15 @@ export class Product extends BaseClassEntity {
   @Column({ type: 'boolean', default: true })
   stockAvailable: boolean;
 
+
   @Column({ type: 'boolean', default: false })
   hotProduct: boolean;
 
   @Column({ type: 'integer', default: 0 })
   index: number;
+
+  @Column({type: 'integer', default: 12})
+  caseSize: number;
 
   @Column({ type: 'integer', default: 0 })
   categoryIndex: number;

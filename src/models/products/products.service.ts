@@ -90,6 +90,7 @@ export class ProductsService {
       categoryIndex: updateProductDto.categoryIndex,
       index: updateProductDto.index,
       state: updateProductDto.state,
+      caseSize: updateProductDto.caseSize,
       category: { id: updateProductDto.categoryId },
     });
 
