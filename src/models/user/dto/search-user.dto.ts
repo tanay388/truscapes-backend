@@ -23,7 +23,7 @@ export class SearchUserDto extends Pagination {
   })
   @IsOptional()
   @IsEnum({
-    enum: ['all', 'approved', 'unapproved'],
+    enum: ['all', 'true', 'false'],
   })
   approved?: string;
 }

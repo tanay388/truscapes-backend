@@ -47,9 +47,9 @@ export class UserService {
     }
     
     if (searchDto.approved) {
-      if (searchDto.approved === 'approved') {
+      if (searchDto.approved === 'true') {
         whereConditions.approved = true;
-      } else if (searchDto.approved === 'unapproved') {
+      } else if (searchDto.approved === 'false') {
         whereConditions.approved = false;
       }
     }
