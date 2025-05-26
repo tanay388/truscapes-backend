@@ -1,5 +1,29 @@
 import { ApiProperty } from '@nestjs/swagger';
 
+class OrderSummaryItem {
+  @ApiProperty({
+    description: 'Date of the order summary'
+  })
+  date: string;
+
+  @ApiProperty({
+    description: 'Number of orders for this date'
+  })
+  count: number;
+}
+
+class RevenueTrendItem {
+  @ApiProperty({
+    description: 'Date of the revenue trend'
+  })
+  date: string;
+
+  @ApiProperty({
+    description: 'Revenue amount for this date'
+  })
+  revenue: number;
+}
+
 export class DashboardStatsDto {
   @ApiProperty({
     description: 'Total number of orders in the system'
@@ -28,25 +52,13 @@ export class DashboardStatsDto {
 
   @ApiProperty({
     description: 'Daily order counts for the last 30 days',
-    type: [{
-      date: String,
-      count: Number
-    }]
+    type: [OrderSummaryItem]
   })
-  ordersSummary: Array<{
-    date: string;
-    count: number;
-  }>;
+  ordersSummary: OrderSummaryItem[];
 
   @ApiProperty({
     description: 'Daily revenue for the last 30 days',
-    type: [{
-      date: String,
-      revenue: Number
-    }]
+    type: [RevenueTrendItem]
   })
-  revenueTrends: Array<{
-    date: string;
-    revenue: number;
-  }>;
+  revenueTrends: RevenueTrendItem[];
 }

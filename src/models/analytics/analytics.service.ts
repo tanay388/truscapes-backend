@@ -34,7 +34,6 @@ export class AnalyticsService {
     const todayOrders = await Order.find({
       where: {
         createdAt: Between(today, new Date()),
-        status: OrderStatus.DELIVERED
       }
     });
     const todayRevenue = todayOrders.reduce((sum, order) => sum + order.total, 0);
@@ -71,7 +70,6 @@ export class AnalyticsService {
     const orders = await Order.find({
       where: {
         createdAt: Between(startDate, endDate),
-        status: OrderStatus.DELIVERED
       },
       select: ['createdAt', 'total']
     });
@@ -80,6 +78,18 @@ export class AnalyticsService {
   }
 
   private groupByDate(orders: Array<{ createdAt: Date; total?: number }>, type: 'count' | 'revenue'): Array<{ date: string; count: number }> | Array<{ date: string; revenue: number }> {
+    // Generate all dates for the last 30 days
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const dates: string[] = [];
+    
+    for (let i = 29; i >= 0; i--) {
+      const date = new Date(today);
+      date.setDate(date.getDate() - i);
+      dates.push(date.toISOString().split('T')[0]);
+    }
+
+    // Group orders by date
     const grouped = orders.reduce<Record<string, number>>((acc, order) => {
       const date = new Date(order.createdAt).toISOString().split('T')[0];
       if (!acc[date]) {
@@ -93,16 +103,12 @@ export class AnalyticsService {
       return acc;
     }, {});
 
-    if (type === 'count') {
-      return Object.entries(grouped).map(([date, value]) => ({
-        date,
-        count: value
-      }));
-    } else {
-      return Object.entries(grouped).map(([date, value]) => ({
-        date,
-        revenue: value
-      }));
-    }
+    // Ensure all dates are present with at least 0 value
+    const result = dates.map(date => ({
+      date,
+      [type === 'count' ? 'count' : 'revenue']: grouped[date] || 0
+    }));
+
+    return result as any;
   }
 }

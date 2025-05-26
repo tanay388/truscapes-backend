@@ -1,11 +1,14 @@
 import { Controller, Get } from '@nestjs/common';
-import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { AnalyticsService } from './analytics.service';
 import { DashboardStatsDto } from './dto/dashboard.dto';
 import { AdminOnly } from '../user/decorator/admin-only.decorator';
+import { FirebaseSecure } from '../user/decorator/firebase.secure.decorator';
 
 @ApiTags('Analytics')
 @Controller('analytics')
+@FirebaseSecure()
+@ApiBearerAuth()
 export class AnalyticsController {
   constructor(private readonly analyticsService: AnalyticsService) {}
 
