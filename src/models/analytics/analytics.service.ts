@@ -19,7 +19,7 @@ export class AnalyticsService {
 
     // Get pending orders
     const pendingOrders = await Order.count({
-      where: { status: OrderStatus.PENDING }
+      where: { status: OrderStatus.CONFIRMED }
     });
 
     // Get total products
