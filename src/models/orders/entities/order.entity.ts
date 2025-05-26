@@ -75,7 +75,10 @@ export class Order extends BaseClassEntity {
   trackingNumber: string;
 
   @Column({ type: 'text', nullable: true })
-  notes: string;
+  notes: string;  
+  
+  @Column({ type: 'text', nullable: true })
+  paymentOrder: string;
 
   @Column({ type: 'text', nullable: true })
   adminNotes: string;

@@ -93,7 +93,10 @@ export class CreateOrderDto {
   @IsString()
   notes?: string;
 
-
+  @ApiPropertyOptional({ required: false })
+  @IsOptional()
+  @IsString()
+  paymentOrder?: string;
 
   @ApiPropertyOptional({ type: CardInfo, required: false })
   @IsOptional()

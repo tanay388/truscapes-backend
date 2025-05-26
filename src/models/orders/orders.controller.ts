@@ -7,6 +7,9 @@ import {
   Param,
   Query,
   ParseIntPipe,
+  Res,
+  Header,
+  StreamableFile,
 } from '@nestjs/common';
 import { OrdersService } from './orders.service';
 import { CreateOrderDto } from './dto/create-order.dto';
@@ -18,6 +21,7 @@ import { FirebaseUser } from 'src/providers/firebase/firebase.service';
 import { AdminOnly } from '../user/decorator/admin-only.decorator';
 import { Pagination } from 'src/common/dtos/pagination.dto';
 import { OrderFilterDto } from './dto/order-filter.dto';
+import { Response } from 'express';
 
 @ApiTags('Orders')
 @Controller('orders')
@@ -52,6 +56,22 @@ export class OrdersController {
   @ApiOperation({ summary: 'Get all orders (Admin only)' })
   findAll(@Query() pagination: Pagination, @Query() filter: OrderFilterDto) {
     return this.ordersService.findAll(pagination, filter);
+  }
+
+  @Get('export')
+  @AdminOnly()
+  @ApiOperation({ summary: 'Export orders to Excel (Admin only)' })
+  async exportOrders(
+    @Query() filter: OrderFilterDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const buffer = await this.ordersService.exportOrdersToExcel(filter);
+    res.set({
+      'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'Content-Disposition': 'attachment; filename=orders.xlsx',
+      'Content-Length': buffer.length,
+    });
+    return new StreamableFile(buffer);
   }
 
   @Get('user/:userId')

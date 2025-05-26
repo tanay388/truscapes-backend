@@ -23,6 +23,7 @@ import { EmailService } from 'src/providers/email/email.service';
 import { AdminEmailEntity } from '../emails/entities/admin-email.entity';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { LessThan } from 'typeorm';
+import * as XLSX from 'xlsx';
 
 @Injectable()
 export class OrdersService {
@@ -31,6 +32,96 @@ export class OrdersService {
     private readonly notificationService: NotificationService,
     private readonly emailService: EmailService,
   ) {}
+
+  async exportOrdersToExcel(filter: OrderFilterDto) {
+    try {
+      const queryBuilder = Order.createQueryBuilder('order')
+        .leftJoinAndSelect('order.user', 'user')
+        .leftJoinAndSelect('order.items', 'items')
+        .leftJoinAndSelect('items.product', 'product')
+        .leftJoinAndSelect('items.variant', 'variant')
+        .orderBy('order.createdAt', 'DESC');
+
+      // Apply filters
+      if (filter?.status) {
+        queryBuilder.andWhere('order.status = :status', { status: filter.status });
+      }
+      if (filter?.minAmount) {
+        queryBuilder.andWhere('order.total >= :minAmount', { minAmount: filter.minAmount });
+      }
+      if (filter?.maxAmount) {
+        queryBuilder.andWhere('order.total <= :maxAmount', { maxAmount: filter.maxAmount });
+      }
+      if (filter?.startDate) {
+        queryBuilder.andWhere('order.createdAt >= :startDate', { startDate: new Date(filter.startDate) });
+      }
+      if (filter?.endDate) {
+        queryBuilder.andWhere('order.createdAt <= :endDate', { endDate: new Date(filter.endDate) });
+      }
+
+      const orders = await queryBuilder.getMany();
+
+      if (!orders || orders.length === 0) {
+        throw new BadRequestException('No orders found matching the filter criteria');
+      }
+
+      const workbook = XLSX.utils.book_new();
+      const worksheet = XLSX.utils.json_to_sheet([]);
+
+      // Add headers
+      XLSX.utils.sheet_add_aoa(worksheet, [[
+        'Order ID', 'Date', 'Status', 'Payment Status',
+        'Customer Name', 'Customer Email',
+        'Product Name', 'Variant', 'Quantity', 'Price', 'Item Total',
+        'Subtotal', 'Shipping Cost', 'Total',
+        'Shipping Address', 'Notes', 'Tracking Number'
+      ]], { origin: 'A1' });
+
+      // Prepare data rows
+      const data = orders.flatMap(order => {
+        if (!order?.items?.length) return [];
+
+        return order.items.map(item => ({
+          'Order ID': order?.id || 'N/A',
+           'Date': order?.createdAt ? new Date(order.createdAt).toLocaleDateString() : 'N/A',
+           'Status': order?.status || 'N/A',
+           'Payment Status': order?.paymentStatus || 'N/A',
+           'Customer Name': order?.user?.name || 'N/A',
+           'Customer Email': order?.user?.email || 'N/A',
+           'Product Name': item?.product?.name || 'N/A',
+           'Variant': item?.variant?.name || 'N/A',
+           'Quantity': item?.quantity || 0,
+           'Price': item?.price || 0,
+           'Item Total': item?.total || 0,
+           'Subtotal': order?.subtotal || 0,
+           'Shipping Cost': order?.shippingCost || 0,
+           'Total': order?.total || 0,
+           'Shipping Address': order?.shippingAddress ? `${order.shippingAddress.street || ''}, ${order.shippingAddress.city || ''}, ${order.shippingAddress.state || ''}, ${order.shippingAddress.country || ''} ${order.shippingAddress.zipCode || ''}`.trim() : 'N/A',
+           'Notes': order?.notes || '',
+           'Tracking Number': order?.trackingNumber || ''
+        }));
+      });
+
+      if (!data || data.length === 0) {
+        throw new BadRequestException('No valid order data available for export');
+      }
+
+      // Add data to worksheet
+      XLSX.utils.sheet_add_json(worksheet, data, { origin: 'A2', skipHeader: true });
+
+      // Auto-size columns
+      const max_width = data.reduce((w, r) => Math.max(w, Object.values(r).join('').length), 10);
+      const wscols = Array(Object.keys(data[0] || {}).length).fill({ wch: Math.min(max_width, 50) });
+      worksheet['!cols'] = wscols;
+
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Orders');
+      const excelBuffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+
+      return excelBuffer;
+    } catch (error) {
+      throw new BadRequestException('Failed to generate Excel file: ' + error.message);
+    }
+  }
 
   calculateShipping = (subtotal: number) => {
     if (subtotal >= 2500) {
@@ -63,6 +154,7 @@ export class OrdersService {
     order.user = user;
     order.shippingAddress = createOrderDto.shippingAddress;
     order.notes = createOrderDto.notes;
+    order.paymentOrder = createOrderDto.paymentOrder;
 
     // Calculate totals
     let subtotal = 0;
