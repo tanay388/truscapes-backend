@@ -36,7 +36,7 @@ export class AnalyticsService {
         createdAt: Between(today, new Date()),
       }
     });
-    const todayRevenue = todayOrders.reduce((sum, order) => sum + order.total, 0);
+    const todayRevenue = todayOrders.reduce((sum, order) => parseFloat(sum.toString()) + parseFloat(order.total.toString()), 0);
 
     // Get orders summary for last 30 days
     const ordersSummary = await this.getOrdersSummary(thirtyDaysAgo, today);
