@@ -254,9 +254,15 @@ export class OrdersService {
         order.user.email,
         order.user.name,
         order,
+        order.paymentOrder,
+        order.shippingAddress.street + ', ' + order.shippingAddress.city + ','+ order.shippingAddress.state + ','+ order.shippingAddress.country + ','+ order.shippingAddress.zipCode,
       );
 
-      await this.emailService.sendNewOrderNotificationToAdmin(order);
+      await this.emailService.sendNewOrderNotificationToAdmin(
+        order,
+        order.paymentOrder,
+        order.shippingAddress.street + ', ' + order.shippingAddress.city + ','+ order.shippingAddress.state + ','+ order.shippingAddress.country + ','+ order.shippingAddress.zipCode,
+      );
 
       return {
         success: true,
@@ -469,6 +475,8 @@ export class OrdersService {
         order.user.name,
         order.id.toString(),
         order.status,
+        order.paymentOrder,
+        order.shippingAddress.street + ', ' + order.shippingAddress.city + ','+ order.shippingAddress.state + ','+ order.shippingAddress.country + ','+ order.shippingAddress.zipCode,
       );
 
     if (order.status === OrderStatus.DELIVERED)

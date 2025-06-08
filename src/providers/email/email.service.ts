@@ -245,6 +245,8 @@ export class EmailService {
     to: string,
     customerName: string,
     orderDetails: any,
+    po?: string,
+    address?: string
   ) {
     return this.sendEmail({
       to,
@@ -263,6 +265,9 @@ export class EmailService {
               )
               .join('')}
           </ul>
+
+          <p> Purchase Order: ${po} </p>
+          <p>Shipping Address: ${address}</p>
         </div>
         <p>You can view and manage your order anytime in your Order History.</p>
         <p>If you have questions, we're always just an email away!</p>
@@ -272,7 +277,7 @@ export class EmailService {
     });
   }
 
-  async sendNewOrderNotificationToAdmin(orderDetails: any) {
+  async sendNewOrderNotificationToAdmin(orderDetails: any, po: string, address: string) {
     return this.sendEmail({
       to: this.adminEmails,
       subject: `New Order Alert: ${orderDetails.items[0].product.name} by ${orderDetails.user.name}`,
@@ -293,6 +298,8 @@ export class EmailService {
               .join('')}
           </ul>
           <p>Date: ${new Date().toLocaleString()}</p>
+          <p> Purchase Order: ${po} </p>
+          <p>Shipping Address: ${address}</p>
         </div>
         <p>Please review and ensure everything is in motion to deliver a top-notch experience.</p>
         <p>Best,</p>
@@ -306,6 +313,8 @@ export class EmailService {
     customerName: string,
     orderId: string,
     newStatus: string,
+    po: string,
+    address: string
   ) {
     return this.sendEmail({
       to,
@@ -315,6 +324,8 @@ export class EmailService {
         <p>We've got some news about your order Id: #${orderId}:</p>
         <div class="details">
           <p>Current Status: ${newStatus}</p>
+          <p>Purchase Order: ${po} </p>
+          <p>Shipping Address: ${address}</p>
         </div>
         <p>We're working to ensure everything goes smoothly. If you have any questions or need more info, just reply to this email, and we'll be happy to help.</p>
         <p>Track your order anytime: <a href="https://shop.tru-scapes.com/">Our Website</a>.</p>
