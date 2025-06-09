@@ -1,8 +1,4 @@
-import {
-  Injectable,
-  NotFoundException,
-  BadRequestException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { OrderFilterDto } from './dto/order-filter.dto';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderDto } from './dto/update-order.dto';
@@ -15,13 +11,11 @@ import { Pagination } from 'src/common/dtos/pagination.dto';
 import { PaymentGatewayService } from '../wallet/services/payment-gateway.service';
 import { PaymentGateway } from '../wallet/dto/repay-dues.dto';
 import { NotificationService } from 'src/providers/notification/notification.service';
-import {
-  Transaction,
-  TransactionType,
-} from '../transactions/entities/transaction.entity';
+import { Transaction, TransactionType } from '../transactions/entities/transaction.entity';
 import { EmailService } from 'src/providers/email/email.service';
 import { AdminEmailEntity } from '../emails/entities/admin-email.entity';
 import { Cron, CronExpression } from '@nestjs/schedule';
+import * as PDFDocument from 'pdfkit';
 import { LessThan } from 'typeorm';
 import * as XLSX from 'xlsx';
 
@@ -32,6 +26,155 @@ export class OrdersService {
     private readonly notificationService: NotificationService,
     private readonly emailService: EmailService,
   ) {}
+
+  async generateOrderPdf(orderId: number) {
+    const order = await Order.findOne({
+      where: { id: orderId },
+      relations: {
+        items: {
+          product: true,
+          variant: true,
+        },
+        user: true,
+      },
+    });
+
+    if (!order) {
+      throw new NotFoundException('Order not found');
+    }
+
+    // Initialize PDF with proper page settings
+     const doc = new PDFDocument({
+       margins: { top: 50, bottom: 50, left: 50, right: 50 },
+       size: 'A4',
+     });
+     const chunks: Buffer[] = [];
+
+     doc.on('data', (chunk) => chunks.push(chunk));
+  doc.on('end', () => {});
+
+  // Company Info
+  doc.fontSize(10)
+    .text('Tru-Scapes®', { align: 'right' })
+    .text('https://shop.tru-scapes.com', { align: 'right', underline: true })
+    .moveDown(0.5);
+
+  // Header
+  doc.fontSize(24)
+    .text('Order Details', { align: 'center' })
+    .moveDown(0.5)
+    .lineWidth(1)
+    .lineCap('butt')
+    .moveTo(50, doc.y)
+    .lineTo(545, doc.y)
+    .stroke()
+    .moveDown();
+
+  // Order Summary
+  doc.fontSize(16).text('Order Summary', { underline: true });
+  doc.fontSize(12);
+
+  const summaryStartY = doc.y + 10;
+  doc.text(`Order ID: #${order.id}`, 50, summaryStartY)
+    .text(`Order Date: ${new Date(order.createdAt).toLocaleString()}`, 50, summaryStartY + 20)
+    .text(`Status: ${order.status}`, 300, summaryStartY)
+    .text(`Purchase Order: ${order.paymentOrder || 'N/A'}`, 300, summaryStartY + 20);
+
+  doc.moveDown(2);
+
+  // Customer Info
+  doc.fontSize(16).text('Customer Information', { underline: true });
+  doc.fontSize(12);
+
+  const customerStartY = doc.y + 10;
+  doc.rect(50, customerStartY, 495, 70).stroke();
+  doc.text(`Name: ${order.user.name}`, 60, customerStartY + 10)
+    .text(`Email: ${order.user.email}`, 60, customerStartY + 30)
+    .text(`Phone: ${order.user.phone || 'N/A'}`, 60, customerStartY + 50);
+
+  doc.moveDown(5);
+
+  // Order Items Table
+  doc.fontSize(16).text('Order Items', { underline: true });
+  doc.fontSize(12);
+
+  const table = {
+    startX: 50,
+    columnSpacing: {
+      product: 200,
+      sku: 100,
+      qty: 50,
+      price: 70,
+      total: 75,
+    },
+    rowHeight: 25,
+  };
+
+  let currentY = doc.y + 10;
+
+  // Table Header
+  doc.rect(table.startX, currentY - 5, 495, 25).fill('#f0f0f0').stroke();
+  doc.fillColor('black').font('Helvetica-Bold')
+    .text('Product', table.startX + 5, currentY)
+    .text('SKU', table.startX + table.columnSpacing.product + 5, currentY)
+    .text('Qty', table.startX + table.columnSpacing.product + table.columnSpacing.sku + 5, currentY)
+    .text('Price', table.startX + table.columnSpacing.product + table.columnSpacing.sku + table.columnSpacing.qty + 5, currentY)
+    .text('Total', table.startX + table.columnSpacing.product + table.columnSpacing.sku + table.columnSpacing.qty + table.columnSpacing.price + 5, currentY);
+
+  currentY += table.rowHeight;
+  doc.font('Helvetica');
+
+  order.items.forEach((item, index) => {
+    if (index % 2 === 1) {
+      doc.rect(table.startX, currentY - 5, 495, table.rowHeight).fill('#fafafa').stroke();
+      doc.fillColor('black');
+    }
+
+    const itemName = item.variant
+      ? `${item.product.name} (${item.variant.name})`
+      : item.product.name;
+
+    doc.text(itemName, table.startX + 5, currentY, { width: table.columnSpacing.product - 10 })
+      .text(item.product.id.toString(), table.startX + table.columnSpacing.product + 5, currentY, { width: table.columnSpacing.sku - 10 })
+      .text(item.quantity.toString(), table.startX + table.columnSpacing.product + table.columnSpacing.sku + 5, currentY, { width: table.columnSpacing.qty - 10, align: 'center' })
+      .text(`$${parseFloat(item.price.toString()).toFixed(2)}`, table.startX + table.columnSpacing.product + table.columnSpacing.sku + table.columnSpacing.qty + 5, currentY, { width: table.columnSpacing.price - 10, align: 'right' })
+      .text(`$${(parseFloat(item.price.toString()) * item.quantity).toFixed(2)}`, table.startX + table.columnSpacing.product + table.columnSpacing.sku + table.columnSpacing.qty + table.columnSpacing.price + 5, currentY, { width: table.columnSpacing.total - 10, align: 'right' });
+
+    currentY += table.rowHeight;
+  });
+
+  doc.moveDown(2);
+
+  // Totals
+  const totalsStartX = 350;
+  const totalsWidth = 195;
+  const totalsStartY = currentY;
+
+  doc.rect(totalsStartX, totalsStartY, totalsWidth, 100).stroke();
+  doc.fontSize(12)
+    .text('Subtotal:', totalsStartX + 10, totalsStartY + 10)
+    .text(`$${parseFloat(order.subtotal.toString()).toFixed(2)}`, totalsStartX + 10, totalsStartY + 10, { width: totalsWidth - 20, align: 'right' })
+    .text('Shipping:', totalsStartX + 10, totalsStartY + 40)
+    .text(`$${parseFloat(order.shippingCost.toString()).toFixed(2)}`, totalsStartX + 10, totalsStartY + 40, { width: totalsWidth - 20, align: 'right' });
+
+  doc.rect(totalsStartX, totalsStartY + 70, totalsWidth, 30).fill('#f0f0f0').stroke();
+  doc.fillColor('black').fontSize(14).font('Helvetica-Bold')
+    .text('Total:', totalsStartX + 10, totalsStartY + 75)
+    .text(`$${parseFloat(order.total.toString()).toFixed(2)}`, totalsStartX + 10, totalsStartY + 75, { width: totalsWidth - 20, align: 'right' });
+
+  // Finalize PDF
+  doc.end();
+
+    // Return the PDF buffer when it's ready
+    return new Promise<{ buffer: Buffer; filename: string }>((resolve) => {
+      doc.on('end', () => {
+        resolve({
+          buffer: Buffer.concat(chunks),
+          filename: `order-${order.id}.pdf`
+        });
+      });
+    });
+  }
 
   async exportOrdersToExcel(filter: OrderFilterDto) {
     try {

@@ -90,6 +90,22 @@ export class OrdersController {
     return this.ordersService.findOne(id, user.uid);
   }
 
+  @Get(':id/pdf')
+  @AdminOnly()
+  @ApiOperation({ summary: 'Get order PDF (Admin only)' })
+  async getOrderPdf(
+    @Param('id', ParseIntPipe) id: number,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const { buffer, filename } = await this.ordersService.generateOrderPdf(id);
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename=${filename}`,
+      'Content-Length': buffer.length,
+    });
+    return new StreamableFile(buffer);
+  }
+
   @Patch(':id')
   @AdminOnly()
   @ApiOperation({ summary: 'Update order status (Admin only)' })
