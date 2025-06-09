@@ -250,28 +250,71 @@ export class EmailService {
   ) {
     return this.sendEmail({
       to,
-      subject: `Your New Tru-Scapes® Order ${orderDetails.items[0].product.name} Is Confirmed`,
+      subject: `Your New Tru-Scapes® Order #${orderDetails.id} - ${orderDetails.items[0].product.name} [] ${orderDetails.items.length } items ] Is Confirmed`,
       html: `
         <p>Hello ${customerName},</p>
         <p>Thanks for choosing Tru-Scapes®! We're excited to let you know that your order Id: #${orderDetails.id} is confirmed and is now being processed.</p>
         <div class="details">
           <h2>Order Details:</h2>
-          <p>Items/Service: </p>
-          <ul>
+          <div class="order-summary">
+            <p><strong>Order ID:</strong> #${orderDetails.id}</p>
+            <p><strong>Order Date:</strong> ${new Date(orderDetails.createdAt).toLocaleDateString()}</p>
+            <p><strong>Order Status:</strong> ${orderDetails.status}</p>
+            <p><strong>Purchase Order:</strong> ${po || 'N/A'}</p>
+          </div>
+
+          <h3>Ordered Items:</h3>
+          <table class="items-table" style="width: 100%; border-collapse: collapse; margin: 10px 0;">
+            <tr style="background-color: #f8f9fa;">
+              <th style="padding: 8px; border: 1px solid #dee2e6; text-align: left;">Product</th>
+              <th style="padding: 8px; border: 1px solid #dee2e6; text-align: left;">SKU</th>
+              <th style="padding: 8px; border: 1px solid #dee2e6; text-align: center;">Quantity</th>
+              <th style="padding: 8px; border: 1px solid #dee2e6; text-align: right;">Price</th>
+              <th style="padding: 8px; border: 1px solid #dee2e6; text-align: right;">Total</th>
+            </tr>
             ${orderDetails.items
               .map(
-                (item: any) =>
-                  `<li>${item.product.name} (${item.quantity}) = $${item.total}</li>`,
-              )
-              .join('')}
-          </ul>
+                (item: any) => `
+                <tr>
+                  <td style="padding: 8px; border: 1px solid #dee2e6;">
+                    ${item.product.name}
+                    ${item.variant ? `<br><small>Variant: ${item.variant.name}</small>` : ''}
+                  </td>
+                  <td style="padding: 8px; border: 1px solid #dee2e6;">${item.product.id || 'N/A'}</td>
+                  <td style="padding: 8px; border: 1px solid #dee2e6; text-align: center;">${item.quantity}</td>
+                  <td style="padding: 8px; border: 1px solid #dee2e6; text-align: right;">$${item.price.toFixed(2)}</td>
+                  <td style="padding: 8px; border: 1px solid #dee2e6; text-align: right;">$${item.total.toFixed(2)}</td>
+                </tr>
+              `).join('')}
+            <tr style="background-color: #f8f9fa;">
+              <td colspan="4" style="padding: 8px; border: 1px solid #dee2e6; text-align: right;"><strong>Subtotal:</strong></td>
+              <td style="padding: 8px; border: 1px solid #dee2e6; text-align: right;">$${orderDetails.subtotal.toFixed(2)}</td>
+            </tr>
+            ${orderDetails.tax ? `
+            <tr style="background-color: #f8f9fa;">
+              <td colspan="4" style="padding: 8px; border: 1px solid #dee2e6; text-align: right;"><strong>Tax:</strong></td>
+              <td style="padding: 8px; border: 1px solid #dee2e6; text-align: right;">$${orderDetails.tax.toFixed(2)}</td>
+            </tr>` : ''}
+            <tr style="background-color: #f8f9fa;">
+              <td colspan="4" style="padding: 8px; border: 1px solid #dee2e6; text-align: right;"><strong>Total:</strong></td>
+              <td style="padding: 8px; border: 1px solid #dee2e6; text-align: right;"><strong>$${orderDetails.total.toFixed(2)}</strong></td>
+            </tr>
+          </table>
 
-          <p> Purchase Order: ${po} </p>
-          <p>Shipping Address: ${address}</p>
+          <div class="address-section">
+            <div class="shipping-address">
+              <h3>Shipping Address:</h3>
+              <p>${address || 'N/A'}</p>
+            </div>
+            <div class="billing-address">
+              <h3>Billing Address:</h3>
+              <p>${orderDetails.billingAddress || address || 'Same as shipping address'}</p>
+            </div>
+          </div>
         </div>
         <p>You can view and manage your order anytime in your Order History.</p>
         <p>If you have questions, we're always just an email away!</p>
-        <p>Thank you,</p>
+        <p>Thank you for your business,</p>
         <p>The Tru-Scapes Team</p>
       `,
     });
@@ -280,30 +323,85 @@ export class EmailService {
   async sendNewOrderNotificationToAdmin(orderDetails: any, po: string, address: string) {
     return this.sendEmail({
       to: this.adminEmails,
-      subject: `New Order Alert: ${orderDetails.items[0].product.name} by ${orderDetails.user.name}`,
+      subject: `New Order Alert: #${orderDetails.id} from ${orderDetails.user.name}`,
       html: `
         <p>Hello Admin,</p>
-        <p>A new order has just rolled in!</p>
+        <p>A new order has just been received and requires your attention!</p>
         <div class="details">
+          <div class="order-summary">
+            <h2>Order Overview:</h2>
+            <p><strong>Order ID:</strong> #${orderDetails.id}</p>
+            <p><strong>Order Date:</strong> ${new Date(orderDetails.createdAt).toLocaleString()}</p>
+            <p><strong>Order Status:</strong> ${orderDetails.status}</p>
+            <p><strong>Purchase Order:</strong> ${po || 'N/A'}</p>
+          </div>
+
+          <div class="customer-info">
+            <h2>Customer Information:</h2>
+            <p><strong>Name:</strong> ${orderDetails.user.name}</p>
+            <p><strong>Email:</strong> ${orderDetails.user.email}</p>
+            <p><strong>Phone:</strong> ${orderDetails.user.phone || 'N/A'}</p>
+          </div>
+
           <h2>Order Details:</h2>
-          <p>Order ID: ${orderDetails.id}</p>
-          <p>Customer: ${orderDetails.user.name} (${orderDetails.user.email})</p>
-          <p>Items/Service:</p>
-           <ul>
+          <table class="items-table" style="width: 100%; border-collapse: collapse; margin: 10px 0;">
+            <tr style="background-color: #f8f9fa;">
+              <th style="padding: 8px; border: 1px solid #dee2e6; text-align: left;">Product</th>
+              <th style="padding: 8px; border: 1px solid #dee2e6; text-align: left;">SKU</th>
+              <th style="padding: 8px; border: 1px solid #dee2e6; text-align: center;">Quantity</th>
+              <th style="padding: 8px; border: 1px solid #dee2e6; text-align: right;">Price</th>
+              <th style="padding: 8px; border: 1px solid #dee2e6; text-align: right;">Total</th>
+            </tr>
             ${orderDetails.items
               .map(
-                (item: any) =>
-                  `<li>${item.product.name} (${item.quantity}) = $${item.total}</li>`,
-              )
-              .join('')}
-          </ul>
-          <p>Date: ${new Date().toLocaleString()}</p>
-          <p> Purchase Order: ${po} </p>
-          <p>Shipping Address: ${address}</p>
+                (item: any) => `
+                <tr>
+                  <td style="padding: 8px; border: 1px solid #dee2e6;">
+                    ${item.product.name}
+                    ${item.variant ? `<br><small>Variant: ${item.variant.name}</small>` : ''}
+                  </td>
+                  <td style="padding: 8px; border: 1px solid #dee2e6;">${item.product.id || 'N/A'}</td>
+                  <td style="padding: 8px; border: 1px solid #dee2e6; text-align: center;">${item.quantity}</td>
+                  <td style="padding: 8px; border: 1px solid #dee2e6; text-align: right;">$${item.price.toFixed(2)}</td>
+                  <td style="padding: 8px; border: 1px solid #dee2e6; text-align: right;">$${item.total.toFixed(2)}</td>
+                </tr>
+              `).join('')}
+            <tr style="background-color: #f8f9fa;">
+              <td colspan="4" style="padding: 8px; border: 1px solid #dee2e6; text-align: right;"><strong>Subtotal:</strong></td>
+              <td style="padding: 8px; border: 1px solid #dee2e6; text-align: right;">$${orderDetails.subtotal.toFixed(2)}</td>
+            </tr>
+            ${orderDetails.tax ? `
+            <tr style="background-color: #f8f9fa;">
+              <td colspan="4" style="padding: 8px; border: 1px solid #dee2e6; text-align: right;"><strong>Tax:</strong></td>
+              <td style="padding: 8px; border: 1px solid #dee2e6; text-align: right;">$${orderDetails.tax.toFixed(2)}</td>
+            </tr>` : ''}
+            <tr style="background-color: #f8f9fa;">
+              <td colspan="4" style="padding: 8px; border: 1px solid #dee2e6; text-align: right;"><strong>Total:</strong></td>
+              <td style="padding: 8px; border: 1px solid #dee2e6; text-align: right;"><strong>$${orderDetails.total.toFixed(2)}</strong></td>
+            </tr>
+          </table>
+
+          <div class="address-section">
+            <div class="shipping-address">
+              <h3>Shipping Address:</h3>
+              <p>${address || 'N/A'}</p>
+            </div>
+            <div class="billing-address">
+              <h3>Billing Address:</h3>
+              <p>${orderDetails.billingAddress || address || 'Same as shipping address'}</p>
+            </div>
+          </div>
+
+          <div class="notes-section">
+            ${orderDetails.notes ? `
+            <h3>Order Notes:</h3>
+            <p>${orderDetails.notes}</p>
+            ` : ''}
+          </div>
         </div>
-        <p>Please review and ensure everything is in motion to deliver a top-notch experience.</p>
-        <p>Best,</p>
-        <p>Tru-Scapes®</p>
+        <p>Please review this order and process it according to our standard procedures. Remember to check inventory levels and shipping requirements.</p>
+        <p>Best regards,</p>
+        <p>Tru-Scapes® System</p>
       `,
     });
   }
