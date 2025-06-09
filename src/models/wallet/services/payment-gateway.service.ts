@@ -338,12 +338,19 @@ export class PaymentGatewayService {
             order.user.email,
             order.user.name,
             order,
+            order.paymentOrder,
+            order.shippingAddress.street + ', ' + order.shippingAddress.city + ','+ order.shippingAddress.state + ','+ order.shippingAddress.country + ','+ order.shippingAddress.zipCode,
           );
           const emails = await AdminEmailEntity.find();
 
           this.emailService.loadadminEmails(emails.map((email) => email.email));
 
-          await this.emailService.sendNewOrderNotificationToAdmin(order);
+          await this.emailService.sendNewOrderNotificationToAdmin(
+            order, 
+            order.paymentOrder,
+            order.shippingAddress.street + ', ' + order.shippingAddress.city + ','+ order.shippingAddress.state + ','+ order.shippingAddress.country + ','+ order.shippingAddress.zipCode,
+      
+          );
           return {
             success: true,
             requiresAction: false,
