@@ -245,9 +245,7 @@ export class EmailService {
   async sendOrderConfirmationEmail(
     to: string,
     customerName: string,
-    orderDetails: any,
-    po?: string,
-    address?: string
+    orderDetails: Order
   ) {
     return this.sendEmail({
       to,
@@ -261,7 +259,8 @@ export class EmailService {
             <p><strong>Order ID:</strong> #${orderDetails.id}</p>
             <p><strong>Order Date:</strong> ${new Date(orderDetails.createdAt).toLocaleDateString()}</p>
             <p><strong>Order Status:</strong> ${orderDetails.status}</p>
-            <p><strong>Purchase Order:</strong> ${po || 'N/A'}</p>
+            <p><strong>Purchase Order:</strong> ${orderDetails.paymentOrder || 'N/A'}</p>
+            <p><strong>Shipping Cost:</strong> $${parseFloat(orderDetails.shippingCost.toString()).toFixed(2)}</p>
           </div>
 
           <h3>Ordered Items:</h3>
@@ -283,33 +282,35 @@ export class EmailService {
                   </td>
                   <td style="padding: 8px; border: 1px solid #dee2e6;">${item.product.id || 'N/A'}</td>
                   <td style="padding: 8px; border: 1px solid #dee2e6; text-align: center;">${item.quantity}</td>
-                  <td style="padding: 8px; border: 1px solid #dee2e6; text-align: right;">$${item.price.toFixed(2)}</td>
-                  <td style="padding: 8px; border: 1px solid #dee2e6; text-align: right;">$${item.total.toFixed(2)}</td>
+                  <td style="padding: 8px; border: 1px solid #dee2e6; text-align: right;">$${parseFloat(item.price.toString()).toFixed(2)}</td>
+                  <td style="padding: 8px; border: 1px solid #dee2e6; text-align: right;">$${parseFloat(item.total.toString()).toFixed(2)}</td>
                 </tr>
               `).join('')}
             <tr style="background-color: #f8f9fa;">
               <td colspan="4" style="padding: 8px; border: 1px solid #dee2e6; text-align: right;"><strong>Subtotal:</strong></td>
-              <td style="padding: 8px; border: 1px solid #dee2e6; text-align: right;">$${orderDetails.subtotal.toFixed(2)}</td>
+              <td style="padding: 8px; border: 1px solid #dee2e6; text-align: right;">$${parseFloat(orderDetails.subtotal.toString()).toFixed(2)}</td>
             </tr>
-            ${orderDetails.tax ? `
-            <tr style="background-color: #f8f9fa;">
-              <td colspan="4" style="padding: 8px; border: 1px solid #dee2e6; text-align: right;"><strong>Tax:</strong></td>
-              <td style="padding: 8px; border: 1px solid #dee2e6; text-align: right;">$${orderDetails.tax.toFixed(2)}</td>
-            </tr>` : ''}
+
             <tr style="background-color: #f8f9fa;">
               <td colspan="4" style="padding: 8px; border: 1px solid #dee2e6; text-align: right;"><strong>Total:</strong></td>
-              <td style="padding: 8px; border: 1px solid #dee2e6; text-align: right;"><strong>$${orderDetails.total.toFixed(2)}</strong></td>
+              <td style="padding: 8px; border: 1px solid #dee2e6; text-align: right;"><strong>$${parseFloat(orderDetails.total.toString()).toFixed(2)}</strong></td>
             </tr>
           </table>
 
           <div class="address-section">
             <div class="shipping-address">
               <h3>Shipping Address:</h3>
-              <p>${address || 'N/A'}</p>
+              <p>${orderDetails.shippingAddress.street}<br/>
+                 ${orderDetails.shippingAddress.city}, ${orderDetails.shippingAddress.state}<br/>
+                 ${orderDetails.shippingAddress.country}, ${orderDetails.shippingAddress.zipCode}<br/>
+                 Phone: ${orderDetails.shippingAddress.phone}</p>
             </div>
             <div class="billing-address">
               <h3>Billing Address:</h3>
-              <p>${orderDetails.billingAddress || address || 'Same as shipping address'}</p>
+              <p>${orderDetails.shippingAddress.street}<br/>
+                 ${orderDetails.shippingAddress.city}, ${orderDetails.shippingAddress.state}<br/>
+                 ${orderDetails.shippingAddress.country}, ${orderDetails.shippingAddress.zipCode}<br/>
+                 Phone: ${orderDetails.shippingAddress.phone}</p>
             </div>
           </div>
         </div>
@@ -321,7 +322,7 @@ export class EmailService {
     });
   }
 
-  async sendNewOrderNotificationToAdmin(orderDetails: any, po: string, address: string) {
+  async sendNewOrderNotificationToAdmin(orderDetails: Order) {
     return this.sendEmail({
       to: this.adminEmails,
       subject: `New Order Alert: #${orderDetails.id} from ${orderDetails.user.name}`,
@@ -334,14 +335,20 @@ export class EmailService {
             <p><strong>Order ID:</strong> #${orderDetails.id}</p>
             <p><strong>Order Date:</strong> ${new Date(orderDetails.createdAt).toLocaleString()}</p>
             <p><strong>Order Status:</strong> ${orderDetails.status}</p>
-            <p><strong>Purchase Order:</strong> ${po || 'N/A'}</p>
+            <p><strong>Purchase Order:</strong> ${orderDetails.paymentOrder || 'N/A'}</p>
+            <p><strong>Shipping Cost:</strong> $${parseFloat(orderDetails.shippingCost.toString()).toFixed(2)}</p>
           </div>
 
           <div class="customer-info">
             <h2>Customer Information:</h2>
-            <p><strong>Name:</strong> ${orderDetails.user.name}</p>
+            <p><strong>Name:</strong> ${orderDetails.user.name} </p>
             <p><strong>Email:</strong> ${orderDetails.user.email}</p>
             <p><strong>Phone:</strong> ${orderDetails.user.phone || 'N/A'}</p>
+
+
+            <p><strong>Company Name:</strong> ${orderDetails.user.company} </p>
+            <p><strong>Company Address:</strong> ${orderDetails.user.companyAddress}</p>
+            <p><strong>Company Website:</strong> ${orderDetails.user.companyWebsite}</p>
           </div>
 
           <h2>Order Details:</h2>
@@ -363,33 +370,35 @@ export class EmailService {
                   </td>
                   <td style="padding: 8px; border: 1px solid #dee2e6;">${item.product.id || 'N/A'}</td>
                   <td style="padding: 8px; border: 1px solid #dee2e6; text-align: center;">${item.quantity}</td>
-                  <td style="padding: 8px; border: 1px solid #dee2e6; text-align: right;">$${item.price.toFixed(2)}</td>
-                  <td style="padding: 8px; border: 1px solid #dee2e6; text-align: right;">$${item.total.toFixed(2)}</td>
+                  <td style="padding: 8px; border: 1px solid #dee2e6; text-align: right;">$${parseFloat(item.price.toString()).toFixed(2)}</td>
+                  <td style="padding: 8px; border: 1px solid #dee2e6; text-align: right;">$${parseFloat(item.total.toString()).toFixed(2)}</td>
                 </tr>
               `).join('')}
             <tr style="background-color: #f8f9fa;">
               <td colspan="4" style="padding: 8px; border: 1px solid #dee2e6; text-align: right;"><strong>Subtotal:</strong></td>
-              <td style="padding: 8px; border: 1px solid #dee2e6; text-align: right;">$${orderDetails.subtotal.toFixed(2)}</td>
+              <td style="padding: 8px; border: 1px solid #dee2e6; text-align: right;">$${parseFloat(orderDetails.subtotal.toString()).toFixed(2)}</td>
             </tr>
-            ${orderDetails.tax ? `
-            <tr style="background-color: #f8f9fa;">
-              <td colspan="4" style="padding: 8px; border: 1px solid #dee2e6; text-align: right;"><strong>Tax:</strong></td>
-              <td style="padding: 8px; border: 1px solid #dee2e6; text-align: right;">$${orderDetails.tax.toFixed(2)}</td>
-            </tr>` : ''}
+
             <tr style="background-color: #f8f9fa;">
               <td colspan="4" style="padding: 8px; border: 1px solid #dee2e6; text-align: right;"><strong>Total:</strong></td>
-              <td style="padding: 8px; border: 1px solid #dee2e6; text-align: right;"><strong>$${orderDetails.total.toFixed(2)}</strong></td>
+              <td style="padding: 8px; border: 1px solid #dee2e6; text-align: right;"><strong>$${parseFloat(orderDetails.total.toString()).toFixed(2)}</strong></td>
             </tr>
           </table>
 
           <div class="address-section">
             <div class="shipping-address">
               <h3>Shipping Address:</h3>
-              <p>${address || 'N/A'}</p>
+              <p>${orderDetails.shippingAddress.street}<br/>
+                 ${orderDetails.shippingAddress.city}, ${orderDetails.shippingAddress.state}<br/>
+                 ${orderDetails.shippingAddress.country}, ${orderDetails.shippingAddress.zipCode}<br/>
+                 Phone: ${orderDetails.shippingAddress.phone}</p>
             </div>
             <div class="billing-address">
               <h3>Billing Address:</h3>
-              <p>${orderDetails.billingAddress || address || 'Same as shipping address'}</p>
+              <p>${orderDetails.shippingAddress.street}<br/>
+                 ${orderDetails.shippingAddress.city}, ${orderDetails.shippingAddress.state}<br/>
+                 ${orderDetails.shippingAddress.country}, ${orderDetails.shippingAddress.zipCode}<br/>
+                 Phone: ${orderDetails.shippingAddress.phone}</p>
             </div>
           </div>
 
@@ -446,23 +455,23 @@ export class EmailService {
                   </td>
                   <td style="padding: 10px; border: 1px solid #dee2e6;">${item.product.id}</td>
                   <td style="padding: 10px; text-align: center; border: 1px solid #dee2e6;">${item.quantity}</td>
-                  <td style="padding: 10px; text-align: right; border: 1px solid #dee2e6;">$${item.price.toFixed(2)}</td>
-                  <td style="padding: 10px; text-align: right; border: 1px solid #dee2e6;">$${(item.price * item.quantity).toFixed(2)}</td>
+                  <td style="padding: 10px; text-align: right; border: 1px solid #dee2e6;">$${parseFloat(item.price.toString()).toFixed(2)}</td>
+                  <td style="padding: 10px; text-align: right; border: 1px solid #dee2e6;">$${(parseFloat(item.price.toString()) * item.quantity).toFixed(2)}</td>
                 </tr>
               `).join('')}
               <tr>
                 <td colspan="4" style="padding: 10px; text-align: right; border: 1px solid #dee2e6;"><strong>Subtotal:</strong></td>
-                <td style="padding: 10px; text-align: right; border: 1px solid #dee2e6;">$${orderDetails.items.reduce((sum, item) => sum + (item.price * item.quantity), 0).toFixed(2)}</td>
+                <td style="padding: 10px; text-align: right; border: 1px solid #dee2e6;">$${parseFloat(orderDetails.subtotal.toString()).toFixed(2)}</td>
               </tr>
               ${orderDetails.shippingCost ? `
                 <tr>
                   <td colspan="4" style="padding: 10px; text-align: right; border: 1px solid #dee2e6;"><strong>Delivery charges:</strong></td>
-                  <td style="padding: 10px; text-align: right; border: 1px solid #dee2e6;">$${orderDetails.shippingCost.toFixed(2)}</td>
+                  <td style="padding: 10px; text-align: right; border: 1px solid #dee2e6;">$${parseFloat(orderDetails.shippingCost.toString()).toFixed(2)}</td>
                 </tr>
               ` : ''}
               <tr>
                 <td colspan="4" style="padding: 10px; text-align: right; border: 1px solid #dee2e6;"><strong>Total:</strong></td>
-                <td style="padding: 10px; text-align: right; border: 1px solid #dee2e6;"><strong>$${orderDetails.total.toFixed(2)}</strong></td>
+                <td style="padding: 10px; text-align: right; border: 1px solid #dee2e6;"><strong>$${parseFloat(orderDetails.total.toString()).toFixed(2)}</strong></td>
               </tr>
             </table>
           </div>
