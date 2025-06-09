@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as nodemailer from 'nodemailer';
 import { AdminEmailEntity } from 'src/models/emails/entities/admin-email.entity';
+import { Order } from 'src/models/orders/entities/order.entity';
 
 interface EmailOptions {
   to: string | string[];
@@ -409,21 +410,79 @@ export class EmailService {
   async sendOrderStatusUpdateEmail(
     to: string,
     customerName: string,
-    orderId: string,
-    newStatus: string,
-    po: string,
-    address: string
+    orderDetails: Order,
+    newStatus: string
   ) {
     return this.sendEmail({
       to,
-      subject: `Update on Your Tru-Scapes® Order ${orderId}`,
+      subject: `Update on Your Tru-Scapes® Order ${orderDetails.id}`,
       html: `
         <p>Hello ${customerName},</p>
-        <p>We've got some news about your order Id: #${orderId}:</p>
+        <p>We've got some news about your order Id: #${orderDetails.id}:</p>
         <div class="details">
-          <p>Current Status: ${newStatus}</p>
-          <p>Purchase Order: ${po} </p>
-          <p>Shipping Address: ${address}</p>
+          <h2>Order Status Update:</h2>
+          <div class="order-summary">
+            <p><strong>Order ID:</strong> #${orderDetails.id}</p>
+            <p><strong>Order Date:</strong> ${new Date(orderDetails.createdAt).toLocaleDateString()}</p>
+            <p><strong>Current Status:</strong> ${newStatus}</p>
+            <p><strong>Purchase Order:</strong> ${orderDetails.paymentOrder || 'N/A'}</p>
+          </div>
+
+          <div class="items-table">
+            <h2>Order Items:</h2>
+            <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+              <tr style="background-color: #f8f9fa;">
+                <th style="padding: 10px; text-align: left; border: 1px solid #dee2e6;">Product</th>
+                <th style="padding: 10px; text-align: left; border: 1px solid #dee2e6;">SKU</th>
+                <th style="padding: 10px; text-align: center; border: 1px solid #dee2e6;">Quantity</th>
+                <th style="padding: 10px; text-align: right; border: 1px solid #dee2e6;">Price</th>
+                <th style="padding: 10px; text-align: right; border: 1px solid #dee2e6;">Total</th>
+              </tr>
+              ${orderDetails.items.map(item => `
+                <tr>
+                  <td style="padding: 10px; border: 1px solid #dee2e6;">
+                    ${item.product.name}
+                    ${item.variant ? `<br><small>(${item.variant.name})</small>` : ''}
+                  </td>
+                  <td style="padding: 10px; border: 1px solid #dee2e6;">${item.product.id}</td>
+                  <td style="padding: 10px; text-align: center; border: 1px solid #dee2e6;">${item.quantity}</td>
+                  <td style="padding: 10px; text-align: right; border: 1px solid #dee2e6;">$${item.price.toFixed(2)}</td>
+                  <td style="padding: 10px; text-align: right; border: 1px solid #dee2e6;">$${(item.price * item.quantity).toFixed(2)}</td>
+                </tr>
+              `).join('')}
+              <tr>
+                <td colspan="4" style="padding: 10px; text-align: right; border: 1px solid #dee2e6;"><strong>Subtotal:</strong></td>
+                <td style="padding: 10px; text-align: right; border: 1px solid #dee2e6;">$${orderDetails.items.reduce((sum, item) => sum + (item.price * item.quantity), 0).toFixed(2)}</td>
+              </tr>
+              ${orderDetails.shippingCost ? `
+                <tr>
+                  <td colspan="4" style="padding: 10px; text-align: right; border: 1px solid #dee2e6;"><strong>Delivery charges:</strong></td>
+                  <td style="padding: 10px; text-align: right; border: 1px solid #dee2e6;">$${orderDetails.shippingCost.toFixed(2)}</td>
+                </tr>
+              ` : ''}
+              <tr>
+                <td colspan="4" style="padding: 10px; text-align: right; border: 1px solid #dee2e6;"><strong>Total:</strong></td>
+                <td style="padding: 10px; text-align: right; border: 1px solid #dee2e6;"><strong>$${orderDetails.total.toFixed(2)}</strong></td>
+              </tr>
+            </table>
+          </div>
+
+          <div class="addresses">
+            <div class="shipping-address">
+              <h2>Shipping Address:</h2>
+              <p>${orderDetails.shippingAddress.street}</p>
+              <p>${orderDetails.shippingAddress.city}, ${orderDetails.shippingAddress.state}</p>
+              <p>${orderDetails.shippingAddress.country}, ${orderDetails.shippingAddress.zipCode}</p>
+            </div>
+            ${orderDetails.shippingAddress ? `
+              <div class="billing-address">
+                <h2>Billing Address:</h2>
+                <p>${orderDetails.shippingAddress.street}</p>
+                <p>${orderDetails.shippingAddress.city}, ${orderDetails.shippingAddress.state}</p>
+                <p>${orderDetails.shippingAddress.country}, ${orderDetails.shippingAddress.zipCode}</p>
+              </div>
+            ` : ''}
+          </div>
         </div>
         <p>We're working to ensure everything goes smoothly. If you have any questions or need more info, just reply to this email, and we'll be happy to help.</p>
         <p>Track your order anytime: <a href="https://shop.tru-scapes.com/">Our Website</a>.</p>

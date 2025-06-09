@@ -473,10 +473,8 @@ export class OrdersService {
       await this.emailService.sendOrderStatusUpdateEmail(
         order.user.email,
         order.user.name,
-        order.id.toString(),
-        order.status,
-        order.paymentOrder,
-        order.shippingAddress.street + ', ' + order.shippingAddress.city + ','+ order.shippingAddress.state + ','+ order.shippingAddress.country + ','+ order.shippingAddress.zipCode,
+        order,
+        order.status
       );
 
     if (order.status === OrderStatus.DELIVERED)
