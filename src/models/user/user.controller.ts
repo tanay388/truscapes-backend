@@ -32,6 +32,7 @@ import { Pagination } from 'src/common/dtos/pagination.dto';
 import { Public } from './decorator/public.decorator';
 import { AdminOnly } from './decorator/admin-only.decorator';
 import { SearchUserDto } from './dto/search-user.dto';
+import { CreateUserByAdminDto } from './dto/create-user-by-admin.dto';
 
 @FirebaseSecure()
 @ApiTags('User Controller')
@@ -48,6 +49,30 @@ export class UserController {
     @Headers('notification-token') token: string | undefined,
   ) {
     return this.userService.getProfile(user, token);
+  }
+
+  @Post('admin/create-user')
+  @AdminOnly()
+  @ApiOperation({ summary: 'Create new user (Admin only)' })
+  async createUserByAdmin(
+    @Body() dto: CreateUserByAdminDto,
+    @FUser() admin: FirebaseUser,
+  ) {
+    return this.userService.createUserByAdmin(dto, admin.uid);
+  }
+
+  @Patch('admin/update-user/:id')
+  @AdminOnly()
+  @ApiOperation({ summary: 'Update user profile (Admin only)' })
+  @ApiConsumes('multipart/form-data')
+  @UseInterceptors(FileInterceptor('photo'))
+  async updateUserByAdmin(
+    @Param('id') userId: string,
+    @Body() dto: UpdateUserDto,
+    @UploadedFile() photo: Express.Multer.File,
+    @FUser() admin: FirebaseUser,
+  ) {
+    return this.userService.updateUserByAdmin(userId, dto, photo, admin.uid);
   }
 
   @Get('users')
@@ -142,4 +167,5 @@ export class UserController {
   deleteUser(@Param('id') userId: string, @FUser() admin: FirebaseUser) {
     return this.userService.deleteUser(userId, admin.uid);
   }
+
 }
