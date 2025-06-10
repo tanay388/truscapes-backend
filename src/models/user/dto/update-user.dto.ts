@@ -88,4 +88,29 @@ export class UpdateUserDto {
   @IsEnum(UserRole)
   @IsOptional()
   role?: UserRole;
+
+  @ApiPropertyOptional({ description: 'User\'s shipping address', example: '123 Billing St' })
+  @IsString()
+  @IsOptional()
+  street?: string;
+
+  @ApiPropertyOptional({ description: 'User\'s billing address', example: '123 Billing St' })
+  @IsString()
+  @IsOptional()
+  billingAddress?: string;
+
+  @ApiPropertyOptional({ description: 'User\'s billing city', example: 'Billing City' })
+  @IsString()
+  @IsOptional()
+  billingCity?: string;
+
+  @ApiPropertyOptional({ description: 'User\'s billing state', example: 'Billing State' })
+  @IsString()
+  @IsOptional()
+  billingState?: string;
+
+  @ApiPropertyOptional({ description: 'User\'s billing zip code', example: '12345' })
+  @IsString()
+  @IsOptional()
+  billingZipCode?: string;
 }

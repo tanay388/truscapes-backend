@@ -68,6 +68,9 @@ export class User extends BaseEntity {
   @Column({ nullable: true })
   approved: boolean;
 
+  @Column({nullable: true})
+  street: string;
+
   @Column({ nullable: true })
   country: string;
 
@@ -136,4 +139,16 @@ export class User extends BaseEntity {
       }),
     };
   }
+
+  @Column({ nullable: true })
+  billingAddress: string;
+
+  @Column({ nullable: true })
+  billingCity: string;
+
+  @Column({ nullable: true })
+  billingState: string;
+
+  @Column({ nullable: true })
+  billingZipCode: string;
 }

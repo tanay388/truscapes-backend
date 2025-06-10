@@ -176,6 +176,7 @@ export class UserService {
       gender,
       birthDate,
       phone,
+      street,
       country,
       city,
       company,
@@ -184,6 +185,10 @@ export class UserService {
       role,
       zip,
       additionalDetails,
+      billingAddress,
+      billingCity,
+      billingState,
+      billingZipCode,
       lastName
     }: UpdateUserDto,
     photo?: Express.Multer.File,
@@ -210,7 +215,12 @@ export class UserService {
       role,
       zip,
       additionalDetails,
-      lastName
+      lastName,
+      billingAddress,
+      billingCity,
+      billingState,
+      billingZipCode,
+      street,
     })
 
     await User.update(uid, {
@@ -228,7 +238,12 @@ export class UserService {
       role,
       zip,
       additionalDetails,
-      lastName
+      lastName,
+      billingAddress,
+      billingCity,
+      billingState,
+      billingZipCode,
+      street,
     });
 
     return this.getProfile(fUser);
@@ -285,6 +300,11 @@ export class UserService {
         gender: dto.gender,
         role: dto.role || UserRole.USER,
         approved: true, // Auto-approve users created by admin
+        billingAddress: dto.billingAddress,
+        billingCity: dto.billingCity,
+        billingState: dto.billingState,
+        billingZipCode: dto.billingZipCode,
+        street: dto.street,
       });
 
       // Send welcome email with temporary password
