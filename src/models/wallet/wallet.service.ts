@@ -195,6 +195,12 @@ export class WalletService {
       );
     }
 
+    this.emailService.sendWalletBalanceUpdateEmail(
+      wallet.user.email,
+      wallet.user.name,
+      newBalance,
+    )
+
     return {
       ...wallet,
       message: `Wallet balance updated successfully. New balance: ${newBalance}`,

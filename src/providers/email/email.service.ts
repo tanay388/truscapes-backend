@@ -217,6 +217,31 @@ export class EmailService {
     });
   }
 
+  // Wallet Emails
+  async sendWalletBalanceUpdateEmail(
+    to: string,
+    customerName: string,
+    amount: number,
+  ) {
+    return this.sendEmail({
+      to,
+      subject: 'Your Tru-Scapes® Wallet Has Been Updated',
+      html: `
+        <p>Hello ${customerName},</p>
+        <p>Great news! Your Tru-Scapes® wallet was just updated with new balnce as <strong> $${amount} </strong>.</p>
+        <div class="details">
+          <h2>Transaction details:</h2>
+          <p>Type: Balance updated by Admin</p>
+          <p>New Balance: $${amount}</p>
+        </div>
+        <p>You can review your full transaction history and wallet balance anytime from your Dashboard.</p>
+        <p>If anything looks incorrect or you have questions, we're always here to help.</p>
+        <p>Cheers,</p>
+        <p>The Tru-Scapes® Team</p>
+      `,
+    });
+  }
+
   async sendPaymentRequestEmail(
     to: string,
     customerName: string,
