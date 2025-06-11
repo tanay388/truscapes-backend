@@ -31,11 +31,11 @@ export class TransactionsService {
 
     await transaction.save();
 
-    await this.emailService.sendWalletUpdateEmail(
-      user.email,
-      user.name,
-      amount,
-    );
+    // await this.emailService.sendWalletUpdateEmail(
+    //   user.email,
+    //   user.name,
+    //   amount,
+    // );
 
     return transaction;
   }
