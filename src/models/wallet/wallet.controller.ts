@@ -17,6 +17,7 @@ import { FUser } from '../user/decorator/firebase.user.decorator';
 import { FirebaseUser } from 'src/providers/firebase/firebase.service';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { FirebaseSecure } from '../user/decorator/firebase.secure.decorator';
+import { UpdateWalletBalanceDto } from './dto/update-wallet-balance.dto';
 
 @ApiTags('Wallet')
 @Controller('wallet')
@@ -72,5 +73,19 @@ export class WalletController {
     @Param('paymentGateway') paymentGateway: string,
   ) {
     return this.walletService.verifyPayment(transactionId, paymentGateway);
+  }
+
+  @Patch(':userId/balance')
+  @AdminOnly()
+  @ApiOperation({
+    summary: 'Update wallet balance (Admin only)',
+    description: 'Updates user wallet balance and creates corresponding transaction record',
+  })
+  updateWalletBalance(
+    @Param('userId') userId: string,
+    @Body() updateBalanceDto: UpdateWalletBalanceDto,
+    @FUser() admin: FirebaseUser,
+  ) {
+    return this.walletService.updateWalletBalance(userId, updateBalanceDto.newBalance, admin.uid);
   }
 }

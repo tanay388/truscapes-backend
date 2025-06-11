@@ -64,7 +64,7 @@ export class WalletService {
       TransactionType.CREDIT_ADDED,
       amount,
       description ||
-        `Credit added by admin: ${admin.name || admin.email}. Amount due: ${amount}`,
+        `Credit added by admin: ${admin.name || admin.email}.`,
       userId,
     );
 
@@ -158,5 +158,46 @@ export class WalletService {
     );
 
     return { message: 'Credit due has been cleared' };
+  }
+
+  async updateWalletBalance(userId: string, newBalance: number, adminId: string) {
+    const admin = await User.findOne({ where: { id: adminId } });
+    if (!admin) {
+      throw new NotFoundException('Admin user not found');
+    }
+
+    const wallet = await this.findOne(userId);
+    if (!wallet) {
+      throw new NotFoundException('User wallet not found');
+    }
+
+    const currentBalance = wallet.balance;
+    const difference = Math.abs(newBalance - currentBalance);
+
+    // Update wallet balance
+    wallet.balance = newBalance;
+    await wallet.save();
+
+    // Create transaction record
+    if (newBalance > currentBalance) {
+      await this.transactionsService.addTransaction(
+        TransactionType.CREDIT_ADDED,
+        difference,
+        `Credited by admin: ${admin.name || admin.email}`,
+        userId,
+      );
+    } else if (newBalance < currentBalance) {
+      await this.transactionsService.addTransaction(
+        TransactionType.WITHDRAWAL,
+        difference,
+        `Debited by admin: ${admin.name || admin.email}`,
+        userId,
+      );
+    }
+
+    return {
+      ...wallet,
+      message: `Wallet balance updated successfully. New balance: ${newBalance}`,
+    };
   }
 }
