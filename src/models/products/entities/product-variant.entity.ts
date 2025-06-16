@@ -7,6 +7,9 @@ export class ProductVariant extends BaseClassEntity {
   @Column({ type: 'varchar', nullable: false })
   name: string;
 
+  @Column({ type: 'varchar', nullable: true })
+  sku: string;
+
   @Column('simple-array')
   images: string[];
 

@@ -54,8 +54,19 @@ export class ProductsService {
     if (!variant) {
       return new NotFoundException(`Variant with ID ${variantId} not found`);
     }
+
+    const product = await Product.findOneBy({ id: variant.productId });
+
+    if(product.variants.length === 1){
+      await Product.update(
+        {id: product.id},
+        {
+          state: ProductStatus.DRAFT
+        }
+      )
+    }
     await variant.softRemove();
-    return await Product.findOneBy({ id: variant.productId });
+    return product;
   }
 
   async findAll(search: ProductSearchDto) {

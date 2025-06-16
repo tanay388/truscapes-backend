@@ -99,7 +99,10 @@ export class UserService {
       },
     });
 
-    return users;
+    return users.map(user => ({
+      ...user,
+      name: `${user.name}'s ${user.companyAddress}`
+    }));
   }
 
   async approveSingleUser(userId: string, adminId: string) {

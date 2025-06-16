@@ -270,7 +270,8 @@ export class OrdersService {
     if (subtotal >= 2500) {
       return 0; // Free shipping for orders $2500 and above
     }
-    return subtotal * 0.15; // 15% shipping for orders under $2500
+    const shippingCost =  subtotal * 0.05; // 15% shipping for orders under $2500
+    return Math.max(shippingCost, 10);
   };
 
   getRoleBasedPrice(product: Product, variant: ProductVariant, user: User) {
@@ -302,7 +303,6 @@ export class OrdersService {
     // Calculate totals
     let subtotal = 0;
     const orderItems: OrderItem[] = [];
-    let shippingCostValue = 0;
 
     // Process each order item
     for (const item of createOrderDto.items) {
@@ -327,14 +327,21 @@ export class OrdersService {
         }
       }
 
-      const price = this.getRoleBasedPrice(product, variant, user);
+      let price = this.getRoleBasedPrice(product, variant, user);
+      const casePricePerQuantity = price * 0.95;
+      const caseSize = parseInt(product.caseSize.toString());
+
+      if(caseSize) {
+        if(parseInt(item.quantity.toString())%caseSize === 0) {
+          price = casePricePerQuantity ;
+        }
+      }
+
       console.log('userPrice' + ' ' + price);
       const total =
         parseFloat(price.toString()) * parseFloat(item.quantity.toString());
 
-      shippingCostValue =
-        parseFloat(shippingCostValue.toString()) +
-        parseFloat(product.shippingCost.toString());
+      
 
       const orderItem = new OrderItem();
       orderItem.product = product;

@@ -18,6 +18,14 @@ export class CreateProductVariantDto {
   name: string;
 
   @ApiProperty({
+    description: 'SKU (Stock Keeping Unit) for the product variant',
+    example: 'PRD-123-BLK',
+  })
+  @IsString()
+  @IsNotEmpty()
+  sku: string;
+
+  @ApiProperty({
     description: 'Array of image URLs for the variant',
     example: [
       'https://example.com/image1.png',

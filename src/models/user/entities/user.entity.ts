@@ -124,9 +124,9 @@ export class User extends BaseEntity {
   transactions: Transaction[];
 
   toReturnJson() {
-    const { id, name, email, phone, photo, role, birthDate } = this;
+    const { id, name, email, phone, photo, role, birthDate, companyAddress } = this;
 
-    return { id, name, email, phone, photo, role, birthDate };
+    return { id, name: name + '\'s ' + companyAddress, email, phone, photo, role, birthDate };
   }
 
   withJWT(jwtService: JwtService) {
@@ -151,4 +151,10 @@ export class User extends BaseEntity {
 
   @Column({ nullable: true })
   billingZipCode: string;
+
+  @Column({ nullable: false, default: false })
+  hasSalesRep: boolean;
+
+  @Column({nullable: true})
+  taxExemptFormLink: string;
 }
