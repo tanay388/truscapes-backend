@@ -192,15 +192,24 @@ export class UserService {
       billingCity,
       billingState,
       billingZipCode,
-      lastName
+      lastName,
+      ein,
+      salesRep,
     }: UpdateUserDto,
     photo?: Express.Multer.File,
+    resaleFile?: Express.Multer.File,
   ) {
     const { uid, email } = fUser;
 
     let path: string;
     if (photo) {
       path = await this.uploader.uploadFile(photo, 'users/' + uid);
+    }
+
+    let taxExemptFormLink: string;
+
+    if(resaleFile) {
+      taxExemptFormLink = await this.uploader.uploadFile(resaleFile, 'users/' + uid + '/resale');
     }
 
     console.log({
@@ -224,6 +233,9 @@ export class UserService {
       billingState,
       billingZipCode,
       street,
+      salesRep,
+      ein,
+      taxExemptFormLink
     })
 
     await User.update(uid, {
@@ -247,6 +259,9 @@ export class UserService {
       billingState,
       billingZipCode,
       street,
+      ein,
+      salesRep,
+      taxExemptFormLink: taxExemptFormLink
     });
 
     return this.getProfile(fUser);

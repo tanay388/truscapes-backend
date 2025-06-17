@@ -11,6 +11,7 @@ import {
   Param,
   Query,
   Res,
+  UploadedFiles,
 } from '@nestjs/common';
 import * as XLSX from 'xlsx';
 import { Response } from 'express';
@@ -19,7 +20,7 @@ import { FirebaseSecure } from './decorator/firebase.secure.decorator';
 import { FirebaseUser } from '../../providers/firebase/firebase.service';
 import { FUser } from './decorator/firebase.user.decorator';
 import { UpdateUserDto } from './dto/update-user.dto';
-import { FileInterceptor } from '@nestjs/platform-express';
+import { FileFieldsInterceptor, FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import {
   ApiBearerAuth,
   ApiBody,
@@ -104,13 +105,20 @@ export class UserController {
   @Patch('/')
   @ApiOperation({ summary: 'Update user profile' })
   @ApiConsumes('multipart/form-data')
-  @UseInterceptors(FileInterceptor('photo'))
+  @UseInterceptors(
+    FileFieldsInterceptor(
+      [
+        {name: 'photo', maxCount: 1},
+        {name: 'resaleFile', maxCount: 1}
+      ]
+    )
+  )
   async updateProfile(
     @FUser() user: FirebaseUser,
     @Body() dto: UpdateUserDto,
-    @UploadedFile() photo: Express.Multer.File,
+    @UploadedFiles() files: {photo?: Express.Multer.File[], resaleFile?: Express.Multer.File[]},
   ) {
-    return this.userService.updateProfile(user, dto, photo);
+    return this.userService.updateProfile(user, dto, files.photo[0], files.resaleFile[0]);
   }
 
   @Post('firebase-token')

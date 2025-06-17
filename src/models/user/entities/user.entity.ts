@@ -152,8 +152,11 @@ export class User extends BaseEntity {
   @Column({ nullable: true })
   billingZipCode: string;
 
-  @Column({ nullable: false, default: false })
-  hasSalesRep: boolean;
+  @Column({ nullable: false, default: 'N/A' })
+  salesRep: string;
+  
+  @Column({nullable: true})
+  ein: string;
 
   @Column({nullable: true})
   taxExemptFormLink: string;

@@ -113,4 +113,15 @@ export class UpdateUserDto {
   @IsString()
   @IsOptional()
   billingZipCode?: string;
+
+  @ApiPropertyOptional({ description: 'User\'s sales rep', example: 'Sales Rep' })
+  @IsString()
+  @IsOptional()
+  salesRep?: string;
+
+  @ApiPropertyOptional({ description: 'User\'s EIN', example: '123456789' })
+  @IsString()
+  @IsOptional()
+  ein?: string;
+
 }
