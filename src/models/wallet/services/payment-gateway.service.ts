@@ -112,7 +112,7 @@ export class PaymentGatewayService {
               product_data: {
                 name: 'Payment',
               },
-              unit_amount: parseFloat(amount.toFixed(2)) * 100,
+              unit_amount: parseInt((parseFloat(amount.toFixed(2)) * 100).toString()),
             },
             quantity: 1,
           },
