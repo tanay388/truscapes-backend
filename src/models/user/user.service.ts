@@ -66,7 +66,10 @@ export class UserService {
 
     // this.analyticsService.addAnalytics(user, AnalyticsType.login);
 
-    return user;
+    return {
+      ...user,
+      name: `${user.name}'s ${user.companyAddress}`
+    };
   }
 
   async getUsers(searchDto: SearchUserDto) {
