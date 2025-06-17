@@ -118,7 +118,7 @@ export class UserController {
     @Body() dto: UpdateUserDto,
     @UploadedFiles() files: {photo?: Express.Multer.File[], resaleFile?: Express.Multer.File[]},
   ) {
-    return this.userService.updateProfile(user, dto, files.photo[0], files.resaleFile[0]);
+    return this.userService.updateProfile(user, dto, files.photo?.[0], files.resaleFile?.[0]);
   }
 
   @Post('firebase-token')
