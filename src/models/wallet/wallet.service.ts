@@ -167,6 +167,7 @@ export class WalletService {
     }
 
     const wallet = await this.findOne(userId);
+    const user =await User.findOneBy({id: userId});
     if (!wallet) {
       throw new NotFoundException('User wallet not found');
     }
@@ -196,8 +197,8 @@ export class WalletService {
     }
 
     this.emailService.sendWalletBalanceUpdateEmail(
-      wallet.user.email,
-      wallet.user.name,
+      user.email,
+      user.name,
       newBalance,
     )
 
