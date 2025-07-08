@@ -61,7 +61,7 @@ class ShippingAddressDto {
 
   @ApiProperty()
   @IsString()
-  @IsNotEmpty()
+  @IsOptional()
   country: string;
 
   @ApiProperty()
