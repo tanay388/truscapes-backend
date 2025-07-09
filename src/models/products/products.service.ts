@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { Product, ProductStatus } from './entities/product.entity';
@@ -11,9 +11,10 @@ import { UpdateProductVariantDto } from './dto/update-product-variant.dto';
 @Injectable()
 export class ProductsService {
   async create(createProductDto: CreateProductDto) {
-    // createProductDto.state = ProductStatus.ACTIVE;
+    // Ensure new products start as DRAFT since they won't have variants initially
     const product = await Product.save({
       ...createProductDto,
+      state: ProductStatus.DRAFT, // Force new products to start as DRAFT
       category: { id: createProductDto.categoryId },
     });
 
@@ -90,6 +91,29 @@ export class ProductsService {
 
   async update(id: number, updateProductDto: UpdateProductDto) {
     updateProductDto.categoryId = Number(updateProductDto.categoryId);
+    
+    const product = await Product.findOne({ 
+      where: { id }, 
+      relations: ['variants'] 
+    });
+    
+    if (!product) {
+      throw new NotFoundException(`Product with ID ${id} not found`);
+    }
+    
+    // Check if trying to set status to ACTIVE without variants
+    if (updateProductDto.state === ProductStatus.ACTIVE) {
+      if (!product.variants || product.variants.length === 0) {
+        throw new BadRequestException('Cannot set product status to ACTIVE when no variants are available');
+      }
+    }
+    
+    // If images are being updated and become empty, force status to DRAFT
+    let finalState = updateProductDto.state;
+    if (updateProductDto.images !== undefined && (!updateProductDto.images || updateProductDto.images.length === 0)) {
+      finalState = ProductStatus.DRAFT;
+    }
+    
     const updatedProduct = await Product.update(id, {
       name: updateProductDto.name,
       description: updateProductDto.description,
@@ -100,7 +124,7 @@ export class ProductsService {
       images: updateProductDto.images,
       categoryIndex: updateProductDto.categoryIndex,
       index: updateProductDto.index,
-      state: updateProductDto.state,
+      state: finalState,
       caseSize: updateProductDto.caseSize,
       category: { id: updateProductDto.categoryId },
     });

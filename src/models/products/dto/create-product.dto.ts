@@ -6,10 +6,17 @@ import {
   IsOptional,
   IsNumber,
   IsUUID,
+  ArrayMinSize,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
 
+/**
+ * DTO for creating a new product.
+ * Note: New products automatically start with DRAFT status.
+ * At least one media item is required.
+ * Products can only be set to ACTIVE status after adding variants.
+ */
 export class CreateProductDto {
   @ApiProperty({ description: 'Name of the product', example: 'Cool T-Shirt' })
   @IsString()
@@ -96,8 +103,9 @@ export class CreateProductDto {
     ],
   })
   @IsArray()
-  @IsOptional()
-  images?: string[];
+  @ArrayMinSize(1, { message: 'At least one media item must be selected' })
+  @IsNotEmpty()
+  images: string[];
 
   @ApiPropertyOptional({
     description: 'Case Size of the product',
