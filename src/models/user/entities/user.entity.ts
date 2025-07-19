@@ -160,4 +160,7 @@ export class User extends BaseEntity {
 
   @Column({nullable: true})
   taxExemptFormLink: string;
+
+  @Column({ type: 'boolean', default: false })
+  isLocalDealer: boolean;
 }

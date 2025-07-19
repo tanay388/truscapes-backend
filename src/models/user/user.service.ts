@@ -136,6 +136,26 @@ export class UserService {
     return user;
   }
 
+  async toggleLocalDealerStatus(userId: string, adminId: string) {
+    const user = await User.findOne({ where: { id: userId } });
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    user.isLocalDealer = !user.isLocalDealer;
+    await user.save();
+
+    return {
+      message: `User ${user.isLocalDealer ? 'marked as' : 'unmarked as'} local dealer`,
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        isLocalDealer: user.isLocalDealer
+      }
+    };
+  }
+
   async getProfileById(uid: string) {
     const user = await User.findOne({
       where: { id: uid },

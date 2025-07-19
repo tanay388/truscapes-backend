@@ -97,6 +97,13 @@ export class UserController {
     return this.userService.blockSingleUser(id, user.uid);
   }
 
+  @Post('admin/users/:id/toggle-local-dealer')
+  @AdminOnly()
+  @ApiOperation({ summary: 'Toggle local dealer status for user (Admin only)' })
+  toggleLocalDealerStatus(@Param('id') userId: string, @FUser() admin: FirebaseUser) {
+    return this.userService.toggleLocalDealerStatus(userId, admin.uid);
+  }
+
   @Get(':id')
   getProfileById(@Param('id') userId: string) {
     return this.userService.getProfileById(userId);
