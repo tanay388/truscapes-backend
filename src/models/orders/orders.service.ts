@@ -54,10 +54,12 @@ export class OrdersService {
       try {
         // Retrieve Stripe session and invoice details
         const session = await this.paymentGatewayService['stripe'].checkout.sessions.retrieve(order.paymentIntentId);
+        console.log('Stripe session:', session);
         if (session.invoice) {
           const invoice = await this.paymentGatewayService['stripe'].invoices.retrieve(session.invoice as string);
           stripeInvoiceUrl = invoice.hosted_invoice_url;
         }
+        console.log('Stripe invoice URL:', stripeInvoiceUrl);
       } catch (error) {
         console.error('Error retrieving Stripe invoice:', error);
       }
@@ -112,15 +114,15 @@ export class OrdersService {
       .text(`Purchase Order: ${order.paymentOrder || 'N/A'}`, 300, summaryStartY + 20)
       .text(`Payment Method: ${paymentMethod}`, 50, summaryStartY + 40);
 
-    // Add Stripe invoice link if available
-    if (stripeInvoiceUrl) {
-      doc.text('Stripe Invoice: ', 300, summaryStartY + 40)
-        .text(stripeInvoiceUrl, 380, summaryStartY + 40, { 
-          underline: true, 
-          link: stripeInvoiceUrl,
-          width: 165
-        });
-    }
+    // Add Stripe invoice link if available (moved to Payment Information section)
+    // if (stripeInvoiceUrl) {
+    //   doc.text('Stripe Invoice: ', 300, summaryStartY + 40)
+    //     .text(stripeInvoiceUrl, 380, summaryStartY + 40, { 
+    //       underline: true, 
+    //       link: stripeInvoiceUrl,
+    //       width: 165
+    //     });
+    // }
 
     doc.moveDown(3);
 
@@ -274,8 +276,10 @@ export class OrdersService {
     
     if (stripeInvoiceUrl) {
       doc.moveDown(0.5);
-      doc.text('Stripe Invoice Link: ')
-        .text(stripeInvoiceUrl, { underline: true, link: stripeInvoiceUrl });
+      doc.text('Stripe Invoice: ', { continued: true })
+        .fillColor('blue')
+        .text(stripeInvoiceUrl, { underline: true, link: stripeInvoiceUrl })
+        .fillColor('black');
     }
 
     // Notes Section (if any)
