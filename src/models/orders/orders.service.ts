@@ -188,9 +188,9 @@ export class OrdersService {
     // Table Rows
     order.items.forEach((item, index) => {
       // Check if we need a new page for this row
-      checkPageBreak(table.rowHeight + 10);
+      const pageBreakOccurred = checkPageBreak(table.rowHeight + 10);
       
-      if (doc.y !== currentY) {
+      if (pageBreakOccurred) {
         // We're on a new page, redraw the header
         currentY = doc.y;
         doc.rect(table.startX, currentY, table.width, table.rowHeight).fill('#f0f0f0').stroke();
@@ -223,10 +223,12 @@ export class OrdersService {
         ? `${item.product.name} (${item.variant.name})`
         : item.product.name;
 
+      const sku = item.variant?.sku || `P-${item.product.id}`;
+      
       let xPos = table.startX + 5;
       doc.text(itemName, xPos, currentY + 8, { width: table.columnWidths.product - 10, ellipsis: true });
       xPos += table.columnWidths.product;
-      doc.text(item.product.id.toString(), xPos, currentY + 8, { width: table.columnWidths.sku - 5 });
+      doc.text(sku, xPos, currentY + 8, { width: table.columnWidths.sku - 5 });
       xPos += table.columnWidths.sku;
       doc.text(item.quantity.toString(), xPos, currentY + 8, { align: 'center', width: table.columnWidths.qty });
       xPos += table.columnWidths.qty;
@@ -284,10 +286,11 @@ export class OrdersService {
       doc.fontSize(12).font('Helvetica').moveDown(0.5);
       
       if (order.notes) {
-        doc.text(`Customer Notes: ${order.notes}`);
+        doc.text(`Customer Notes: ${order.notes}`, { width: 495, align: 'left' });
       }
       if (order.adminNotes) {
-        doc.text(`Admin Notes: ${order.adminNotes}`);
+        doc.moveDown(0.5);
+        doc.text(`Admin Notes: ${order.adminNotes}`, { width: 495, align: 'left' });
       }
     }
 

@@ -73,12 +73,28 @@ export class ProductsService {
   async findAll(search: ProductSearchDto) {
     const { q, categoryId, take, skip, state } = search;
 
+    let whereConditions: any = {
+      ...(categoryId && { category: { id: categoryId } }),
+      state: state ? state : ProductStatus.ACTIVE,
+    };
+
+    if (q) {
+      whereConditions = [
+        {
+          name: ILike(`%${q}%`),
+          ...(categoryId && { category: { id: categoryId } }),
+          state: state ? state : ProductStatus.ACTIVE,
+        },
+        {
+          sku: ILike(`%${q}%`),
+          ...(categoryId && { category: { id: categoryId } }),
+          state: state ? state : ProductStatus.ACTIVE,
+        }
+      ];
+    }
+
     return await Product.find({
-      where: {
-        ...(q && { name: ILike(`%${q}%`) }),
-        ...(categoryId && { category: { id: categoryId } }),
-        state: state ? state : ProductStatus.ACTIVE,
-      },
+      where: whereConditions,
       order: { categoryIndex: 'ASC', index: 'ASC', createdAt: 'DESC' },
       take: take,
       skip: skip,
