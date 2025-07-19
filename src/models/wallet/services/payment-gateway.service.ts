@@ -345,7 +345,6 @@ export class PaymentGatewayService {
 
           await this.emailService.sendNewOrderNotificationToAdmin(
             order, 
-            
           );
           return {
             success: true,

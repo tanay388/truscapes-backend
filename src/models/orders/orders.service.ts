@@ -43,127 +43,261 @@ export class OrdersService {
       throw new NotFoundException('Order not found');
     }
 
-    // Initialize PDF with proper page settings
-     const doc = new PDFDocument({
-       margins: { top: 50, bottom: 50, left: 50, right: 50 },
-       size: 'A4',
-     });
-     const chunks: Buffer[] = [];
-
-     doc.on('data', (chunk) => chunks.push(chunk));
-  doc.on('end', () => {});
-
-  // Company Info
-  doc.fontSize(10)
-    .text('Tru-Scapes®', { align: 'right' })
-    .text('https://shop.tru-scapes.com', { align: 'right', underline: true })
-    .moveDown(0.5);
-
-  // Header
-  doc.fontSize(24)
-    .text('Order Details', { align: 'center' })
-    .moveDown(0.5)
-    .lineWidth(1)
-    .lineCap('butt')
-    .moveTo(50, doc.y)
-    .lineTo(545, doc.y)
-    .stroke()
-    .moveDown();
-
-  // Order Summary
-  doc.fontSize(16).text('Order Summary', { underline: true });
-  doc.fontSize(12);
-
-  const summaryStartY = doc.y + 10;
-  doc.text(`Order ID: #${order.id}`, 50, summaryStartY)
-    .text(`Order Date: ${new Date(order.createdAt).toLocaleString()}`, 50, summaryStartY + 20)
-    .text(`Status: ${order.status}`, 300, summaryStartY)
-    .text(`Purchase Order: ${order.paymentOrder || 'N/A'}`, 300, summaryStartY + 20);
-
-  doc.moveDown(2);
-
-  // Customer Info
-  doc.fontSize(16).text('Customer Information', { underline: true });
-  doc.fontSize(12);
-
-  const customerStartY = doc.y + 10;
-  doc.rect(50, customerStartY, 495, 70).stroke();
-  doc.text(`Name: ${order.user.name}`, 60, customerStartY + 10)
-    .text(`Email: ${order.user.email}`, 60, customerStartY + 30)
-    .text(`Phone: ${order.user.phone || 'N/A'}`, 60, customerStartY + 50);
-
-  doc.moveDown(5);
-
-  // Order Items Table
-  doc.fontSize(16).text('Order Items', { underline: true });
-  doc.fontSize(12);
-
-  const table = {
-    startX: 50,
-    columnSpacing: {
-      product: 200,
-      sku: 100,
-      qty: 50,
-      price: 70,
-      total: 75,
-    },
-    rowHeight: 25,
-  };
-
-  let currentY = doc.y + 10;
-
-  // Table Header
-  doc.rect(table.startX, currentY - 5, 495, 25).fill('#f0f0f0').stroke();
-  doc.fillColor('black').font('Helvetica-Bold')
-    .text('Product', table.startX + 5, currentY)
-    .text('SKU', table.startX + table.columnSpacing.product + 5, currentY)
-    .text('Qty', table.startX + table.columnSpacing.product + table.columnSpacing.sku + 5, currentY)
-    .text('Price', table.startX + table.columnSpacing.product + table.columnSpacing.sku + table.columnSpacing.qty + 5, currentY)
-    .text('Total', table.startX + table.columnSpacing.product + table.columnSpacing.sku + table.columnSpacing.qty + table.columnSpacing.price + 5, currentY);
-
-  currentY += table.rowHeight;
-  doc.font('Helvetica');
-
-  order.items.forEach((item, index) => {
-    if (index % 2 === 1) {
-      doc.rect(table.startX, currentY - 5, 495, table.rowHeight).fill('#fafafa').stroke();
-      doc.fillColor('black');
+    // Determine payment method and get Stripe invoice if applicable
+    let paymentMethod = 'Unknown';
+    let stripeInvoiceUrl = null;
+    
+    if (order.paymentIntentId === 'wallet') {
+      paymentMethod = 'Wallet';
+    } else if (order.paymentIntentId && order.paymentIntentId.startsWith('cs_')) {
+      paymentMethod = 'Stripe';
+      try {
+        // Retrieve Stripe session and invoice details
+        const session = await this.paymentGatewayService['stripe'].checkout.sessions.retrieve(order.paymentIntentId);
+        if (session.invoice) {
+          const invoice = await this.paymentGatewayService['stripe'].invoices.retrieve(session.invoice as string);
+          stripeInvoiceUrl = invoice.hosted_invoice_url;
+        }
+      } catch (error) {
+        console.error('Error retrieving Stripe invoice:', error);
+      }
     }
 
-    const itemName = item.variant
-      ? `${item.product.name} (${item.variant.name})`
-      : item.product.name;
+    // Initialize PDF with proper page settings
+    const doc = new PDFDocument({
+      margins: { top: 50, bottom: 50, left: 50, right: 50 },
+      size: 'A4',
+      autoFirstPage: true,
+    });
+    const chunks: Buffer[] = [];
 
-    doc.text(itemName, table.startX + 5, currentY, { width: table.columnSpacing.product - 10 })
-      .text(item.product.id.toString(), table.startX + table.columnSpacing.product + 5, currentY, { width: table.columnSpacing.sku - 10 })
-      .text(item.quantity.toString(), table.startX + table.columnSpacing.product + table.columnSpacing.sku + 5, currentY, { width: table.columnSpacing.qty - 10, align: 'center' })
-      .text(`$${parseFloat(item.price.toString()).toFixed(2)}`, table.startX + table.columnSpacing.product + table.columnSpacing.sku + table.columnSpacing.qty + 5, currentY, { width: table.columnSpacing.price - 10, align: 'right' })
-      .text(`$${(parseFloat(item.price.toString()) * item.quantity).toFixed(2)}`, table.startX + table.columnSpacing.product + table.columnSpacing.sku + table.columnSpacing.qty + table.columnSpacing.price + 5, currentY, { width: table.columnSpacing.total - 10, align: 'right' });
+    doc.on('data', (chunk) => chunks.push(chunk));
+    doc.on('end', () => {});
+
+    // Helper function to check if we need a new page
+    const checkPageBreak = (requiredSpace: number) => {
+      if (doc.y + requiredSpace > doc.page.height - 50) {
+        doc.addPage();
+        return true;
+      }
+      return false;
+    };
+
+    // Company Info
+    doc.fontSize(10)
+      .text('Tru-Scapes®', { align: 'right' })
+      .text('https://shop.tru-scapes.com', { align: 'right', underline: true })
+      .moveDown(0.5);
+
+    // Header
+    doc.fontSize(24)
+      .text('Order Details', { align: 'center' })
+      .moveDown(0.5)
+      .lineWidth(1)
+      .lineCap('butt')
+      .moveTo(50, doc.y)
+      .lineTo(545, doc.y)
+      .stroke()
+      .moveDown();
+
+    // Order Summary Section
+    checkPageBreak(100);
+    doc.fontSize(16).text('Order Summary', { underline: true });
+    doc.fontSize(12).moveDown(0.5);
+
+    const summaryStartY = doc.y;
+    doc.text(`Order ID: #${order.id}`, 50, summaryStartY)
+      .text(`Order Date: ${new Date(order.createdAt).toLocaleString()}`, 50, summaryStartY + 20)
+      .text(`Status: ${order.status}`, 300, summaryStartY)
+      .text(`Purchase Order: ${order.paymentOrder || 'N/A'}`, 300, summaryStartY + 20)
+      .text(`Payment Method: ${paymentMethod}`, 50, summaryStartY + 40);
+
+    // Add Stripe invoice link if available
+    if (stripeInvoiceUrl) {
+      doc.text('Stripe Invoice: ', 300, summaryStartY + 40)
+        .text(stripeInvoiceUrl, 380, summaryStartY + 40, { 
+          underline: true, 
+          link: stripeInvoiceUrl,
+          width: 165
+        });
+    }
+
+    doc.moveDown(3);
+
+    // Customer Information Section
+    checkPageBreak(100);
+    doc.fontSize(16).text('Customer Information', { underline: true });
+    doc.fontSize(12).moveDown(0.5);
+
+    const customerStartY = doc.y;
+    doc.rect(50, customerStartY, 495, 90).stroke();
+    doc.text(`Name: ${order.user.name}`, 60, customerStartY + 10)
+      .text(`Email: ${order.user.email}`, 60, customerStartY + 30)
+      .text(`Phone: ${order.user.phone || 'N/A'}`, 60, customerStartY + 50);
+
+    // Shipping Address
+    if (order.shippingAddress) {
+      const addr = order.shippingAddress;
+      doc.text(`Shipping Address:`, 300, customerStartY + 10)
+        .text(`${addr.street}`, 300, customerStartY + 30)
+        .text(`${addr.city}, ${addr.state} ${addr.zipCode}`, 300, customerStartY + 50)
+        .text(`${addr.country}`, 300, customerStartY + 70);
+    }
+
+    doc.y = customerStartY + 100;
+    doc.moveDown(2);
+
+    // Order Items Section
+    checkPageBreak(150);
+    doc.fontSize(16).text('Order Items', { underline: true });
+    doc.fontSize(12).moveDown(0.5);
+
+    const table = {
+      startX: 50,
+      width: 495,
+      columnWidths: {
+        product: 180,
+        sku: 80,
+        qty: 50,
+        price: 80,
+        total: 105,
+      },
+      rowHeight: 30,
+    };
+
+    let currentY = doc.y;
+
+    // Table Header
+    doc.rect(table.startX, currentY, table.width, table.rowHeight).fill('#f0f0f0').stroke();
+    doc.fillColor('black').font('Helvetica-Bold').fontSize(11);
+    
+    let xPos = table.startX + 5;
+    doc.text('Product', xPos, currentY + 8);
+    xPos += table.columnWidths.product;
+    doc.text('SKU', xPos, currentY + 8);
+    xPos += table.columnWidths.sku;
+    doc.text('Qty', xPos, currentY + 8, { align: 'center', width: table.columnWidths.qty });
+    xPos += table.columnWidths.qty;
+    doc.text('Price', xPos, currentY + 8, { align: 'right', width: table.columnWidths.price });
+    xPos += table.columnWidths.price;
+    doc.text('Total', xPos, currentY + 8, { align: 'right', width: table.columnWidths.total });
 
     currentY += table.rowHeight;
-  });
+    doc.font('Helvetica').fontSize(10);
 
-  doc.moveDown(2);
+    // Table Rows
+    order.items.forEach((item, index) => {
+      // Check if we need a new page for this row
+      checkPageBreak(table.rowHeight + 10);
+      
+      if (doc.y !== currentY) {
+        // We're on a new page, redraw the header
+        currentY = doc.y;
+        doc.rect(table.startX, currentY, table.width, table.rowHeight).fill('#f0f0f0').stroke();
+        doc.fillColor('black').font('Helvetica-Bold').fontSize(11);
+        
+        let xPos = table.startX + 5;
+        doc.text('Product', xPos, currentY + 8);
+        xPos += table.columnWidths.product;
+        doc.text('SKU', xPos, currentY + 8);
+        xPos += table.columnWidths.sku;
+        doc.text('Qty', xPos, currentY + 8, { align: 'center', width: table.columnWidths.qty });
+        xPos += table.columnWidths.qty;
+        doc.text('Price', xPos, currentY + 8, { align: 'right', width: table.columnWidths.price });
+        xPos += table.columnWidths.price;
+        doc.text('Total', xPos, currentY + 8, { align: 'right', width: table.columnWidths.total });
+        
+        currentY += table.rowHeight;
+        doc.font('Helvetica').fontSize(10);
+      }
 
-  // Totals
-  const totalsStartX = 350;
-  const totalsWidth = 195;
-  const totalsStartY = currentY;
+      // Alternate row colors
+      if (index % 2 === 1) {
+        doc.rect(table.startX, currentY, table.width, table.rowHeight).fill('#fafafa').stroke();
+        doc.fillColor('black');
+      } else {
+        doc.rect(table.startX, currentY, table.width, table.rowHeight).stroke();
+      }
 
-  doc.rect(totalsStartX, totalsStartY, totalsWidth, 100).stroke();
-  doc.fontSize(12)
-    .text('Subtotal:', totalsStartX + 10, totalsStartY + 10)
-    .text(`$${parseFloat(order.subtotal.toString()).toFixed(2)}`, totalsStartX + 10, totalsStartY + 10, { width: totalsWidth - 20, align: 'right' })
-    .text('Shipping:', totalsStartX + 10, totalsStartY + 40)
-    .text(`$${parseFloat(order.shippingCost.toString()).toFixed(2)}`, totalsStartX + 10, totalsStartY + 40, { width: totalsWidth - 20, align: 'right' });
+      const itemName = item.variant
+        ? `${item.product.name} (${item.variant.name})`
+        : item.product.name;
 
-  doc.rect(totalsStartX, totalsStartY + 70, totalsWidth, 30).fill('#f0f0f0').stroke();
-  doc.fillColor('black').fontSize(14).font('Helvetica-Bold')
-    .text('Total:', totalsStartX + 10, totalsStartY + 75)
-    .text(`$${parseFloat(order.total.toString()).toFixed(2)}`, totalsStartX + 10, totalsStartY + 75, { width: totalsWidth - 20, align: 'right' });
+      let xPos = table.startX + 5;
+      doc.text(itemName, xPos, currentY + 8, { width: table.columnWidths.product - 10, ellipsis: true });
+      xPos += table.columnWidths.product;
+      doc.text(item.product.id.toString(), xPos, currentY + 8, { width: table.columnWidths.sku - 5 });
+      xPos += table.columnWidths.sku;
+      doc.text(item.quantity.toString(), xPos, currentY + 8, { align: 'center', width: table.columnWidths.qty });
+      xPos += table.columnWidths.qty;
+      doc.text(`$${parseFloat(item.price.toString()).toFixed(2)}`, xPos, currentY + 8, { align: 'right', width: table.columnWidths.price - 5 });
+      xPos += table.columnWidths.price;
+      doc.text(`$${(parseFloat(item.price.toString()) * item.quantity).toFixed(2)}`, xPos, currentY + 8, { align: 'right', width: table.columnWidths.total - 5 });
 
-  // Finalize PDF
-  doc.end();
+      currentY += table.rowHeight;
+    });
+
+    doc.y = currentY + 20;
+
+    // Totals Section
+    checkPageBreak(120);
+    const totalsStartX = 350;
+    const totalsWidth = 195;
+    const totalsStartY = doc.y;
+
+    doc.rect(totalsStartX, totalsStartY, totalsWidth, 90).stroke();
+    doc.fontSize(12)
+      .text('Subtotal:', totalsStartX + 10, totalsStartY + 15)
+      .text(`$${parseFloat(order.subtotal.toString()).toFixed(2)}`, totalsStartX + 10, totalsStartY + 15, { width: totalsWidth - 20, align: 'right' })
+      .text('Shipping:', totalsStartX + 10, totalsStartY + 35)
+      .text(`$${parseFloat(order.shippingCost.toString()).toFixed(2)}`, totalsStartX + 10, totalsStartY + 35, { width: totalsWidth - 20, align: 'right' });
+
+    doc.rect(totalsStartX, totalsStartY + 55, totalsWidth, 35).fill('#f0f0f0').stroke();
+    doc.fillColor('black').fontSize(14).font('Helvetica-Bold')
+      .text('Total:', totalsStartX + 10, totalsStartY + 65)
+      .text(`$${parseFloat(order.total.toString()).toFixed(2)}`, totalsStartX + 10, totalsStartY + 65, { width: totalsWidth - 20, align: 'right' });
+
+    // Payment Information Section
+    doc.y = totalsStartY + 100;
+    checkPageBreak(80);
+    doc.fontSize(16).font('Helvetica-Bold').text('Payment Information', { underline: true });
+    doc.fontSize(12).font('Helvetica').moveDown(0.5);
+    
+    doc.text(`Payment Method: ${paymentMethod}`);
+    doc.text(`Payment Status: ${order.paymentStatus}`);
+    
+    if (order.paymentIntentId && order.paymentIntentId !== 'wallet') {
+      doc.text(`Transaction ID: ${order.paymentIntentId}`);
+    }
+    
+    if (stripeInvoiceUrl) {
+      doc.moveDown(0.5);
+      doc.text('Stripe Invoice Link: ')
+        .text(stripeInvoiceUrl, { underline: true, link: stripeInvoiceUrl });
+    }
+
+    // Notes Section (if any)
+    if (order.notes || order.adminNotes) {
+      doc.moveDown(2);
+      checkPageBreak(60);
+      doc.fontSize(16).font('Helvetica-Bold').text('Notes', { underline: true });
+      doc.fontSize(12).font('Helvetica').moveDown(0.5);
+      
+      if (order.notes) {
+        doc.text(`Customer Notes: ${order.notes}`);
+      }
+      if (order.adminNotes) {
+        doc.text(`Admin Notes: ${order.adminNotes}`);
+      }
+    }
+
+    // Footer
+    doc.moveDown(2);
+    doc.fontSize(10).text('Thank you for your business!', { align: 'center' });
+    doc.text('For questions about this order, please contact support@tru-scapes.com', { align: 'center' });
+
+    // Finalize PDF
+    doc.end();
 
     // Return the PDF buffer when it's ready
     return new Promise<{ buffer: Buffer; filename: string }>((resolve) => {
