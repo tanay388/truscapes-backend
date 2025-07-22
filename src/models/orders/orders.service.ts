@@ -498,7 +498,11 @@ export class OrdersService {
     }
 
     // Calculate shipping cost (you can implement your own logic)
-    const shippingCost = this.calculateShipping(subtotal); // Default shipping cost
+    let shippingCost = this.calculateShipping(subtotal); // Default shipping cost
+
+    if(createOrderDto.shippingAddress.city === 'Store Collection') {
+      shippingCost = 0;
+    }
 
     console.log('subtotal' + ' ' + subtotal);
     console.log('shippingCost' + ' ' + shippingCost);
