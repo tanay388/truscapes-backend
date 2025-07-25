@@ -27,7 +27,6 @@ import {
   PaymentStatus,
 } from 'src/models/orders/entities/order.entity';
 import { EmailService } from 'src/providers/email/email.service';
-import { CardInfo } from '../entities/card.entity';
 import { AdminEmailEntity } from 'src/models/emails/entities/admin-email.entity';
 
 interface PaymentResponse {
@@ -256,13 +255,7 @@ export class PaymentGatewayService {
             ApiContracts.MessageTypeEnum.OK
           ) {
             const transactionResponse = response.getTransactionResponse();
-            const card = await CardInfo.create({
-              cardNumber: paymentData.cardNumber,
-              expirationDate: paymentData.expirationDate,
-              cvv: paymentData.cvv,
-              user: { id: userId },
-            });
-            await card.save();
+            
 
             resolve({
               success: true,
