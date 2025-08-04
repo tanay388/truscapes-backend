@@ -174,6 +174,26 @@ export class EmailService {
     });
   }
 
+  async sendPasswordResetNotificationEmail(to: string, customerName: string, newPassword: string) {
+    return this.sendEmail({
+      to,
+      subject: 'Your Tru-Scapes® Password Has Been Reset',
+      html: `
+        <p>Hello ${to},</p>
+        <p>Your password has been reset by an administrator. You can now log in to your Tru-Scapes® account using your new password.</p>
+        <div class="details">
+          <h2>Your New Login Credentials:</h2>
+          <p><strong>Email:</strong> ${to}</p>
+          <p><strong>New Password:</strong> ${newPassword}</p>
+        </div>
+        <p><strong>Important Security Notice:</strong> For your security, we strongly recommend that you change this password after logging in. You can do this by going to your account settings.</p>
+        <p>If you did not request this password reset or have any concerns about your account security, please contact our support team immediately.</p>
+        <p>Thank you,</p>
+        <p>The Tru-Scapes® Team</p>
+      `,
+    });
+  }
+
   async sendNewAccountNotificationToAdmin(customerDetails: any) {
     return this.sendEmail({
       to: this.adminEmails,

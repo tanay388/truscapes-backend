@@ -34,6 +34,7 @@ import { Public } from './decorator/public.decorator';
 import { AdminOnly } from './decorator/admin-only.decorator';
 import { SearchUserDto } from './dto/search-user.dto';
 import { CreateUserByAdminDto } from './dto/create-user-by-admin.dto';
+import { ResetPasswordByAdminDto } from './dto/reset-password-by-admin.dto';
 
 @FirebaseSecure()
 @ApiTags('User Controller')
@@ -60,6 +61,13 @@ export class UserController {
     @FUser() admin: FirebaseUser,
   ) {
     return this.userService.createUserByAdmin(dto, admin.uid);
+  }
+
+  @Post('admin/reset-password')
+  @AdminOnly()
+  @ApiOperation({ summary: 'Reset user password (Admin only)' })
+  resetPasswordByAdmin(@Body() dto: ResetPasswordByAdminDto, @FUser() admin: FirebaseUser) {
+    return this.userService.resetPasswordByAdmin(dto, admin.uid);
   }
 
   @Patch('admin/update-user/:id')
@@ -103,6 +111,8 @@ export class UserController {
   toggleLocalDealerStatus(@Param('id') userId: string, @FUser() admin: FirebaseUser) {
     return this.userService.toggleLocalDealerStatus(userId, admin.uid);
   }
+
+
 
   @Get(':id')
   getProfileById(@Param('id') userId: string) {

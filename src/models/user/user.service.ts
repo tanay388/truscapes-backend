@@ -10,6 +10,7 @@ import { AdminEmailEntity } from '../emails/entities/admin-email.entity';
 import { Like } from 'typeorm';
 import { SearchUserDto } from './dto/search-user.dto';
 import { CreateUserByAdminDto } from './dto/create-user-by-admin.dto';
+import { ResetPasswordByAdminDto } from './dto/reset-password-by-admin.dto';
 
 @Injectable()
 export class UserService {
@@ -154,6 +155,41 @@ export class UserService {
         isLocalDealer: user.isLocalDealer
       }
     };
+  }
+
+  async resetPasswordByAdmin(dto: ResetPasswordByAdminDto, adminId: string) {
+    const { userId, newPassword } = dto;
+    
+    // Check if user exists in database
+    const user = await User.findOne({ where: { id: userId } });
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    try {
+      // Update password using Firebase Admin SDK
+      await this.firebaseService.auth.updateUser(userId, {
+        password: newPassword
+      });
+
+      // Send email notification to user about password reset
+      await this.emailService.sendPasswordResetNotificationEmail(
+        user.email,
+        user.name || user.email,
+        newPassword
+      );
+
+      return {
+        message: 'Password reset successfully',
+        user: {
+          id: user.id,
+          name: user.name,
+          email: user.email
+        }
+      };
+    } catch (error) {
+      throw new BadRequestException(`Failed to reset password: ${error.message}`);
+    }
   }
 
   async getProfileById(uid: string) {
