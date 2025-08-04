@@ -11,6 +11,7 @@ import { Like } from 'typeorm';
 import { SearchUserDto } from './dto/search-user.dto';
 import { CreateUserByAdminDto } from './dto/create-user-by-admin.dto';
 import { ResetPasswordByAdminDto } from './dto/reset-password-by-admin.dto';
+import { ForgotPasswordDto } from './dto/forgot-password.dto';
 
 @Injectable()
 export class UserService {
@@ -189,6 +190,34 @@ export class UserService {
       };
     } catch (error) {
       throw new BadRequestException(`Failed to reset password: ${error.message}`);
+    }
+  }
+
+  async forgotPassword(dto: ForgotPasswordDto) {
+    const { email } = dto;
+    
+    // Check if user exists in database
+    const user = await User.findOne({ where: { email } });
+    if (!user) {
+      throw new NotFoundException('User with this email address not found');
+    }
+
+    try {
+      // Generate password reset link using Firebase Admin SDK
+      const resetLink = await this.firebaseService.auth.generatePasswordResetLink(email);
+
+      // Send email with password reset link
+      await this.emailService.sendPasswordResetLinkEmail(
+        user.email,
+        user.name || user.email,
+        resetLink
+      );
+
+      return {
+        message: 'Password reset link sent successfully to your email address'
+      };
+    } catch (error) {
+      throw new BadRequestException(`Failed to send password reset link: ${error.message}`);
     }
   }
 

@@ -179,7 +179,7 @@ export class EmailService {
       to,
       subject: 'Your Tru-Scapes® Password Has Been Reset',
       html: `
-        <p>Hello ${to},</p>
+        <p>Hello ${customerName},</p>
         <p>Your password has been reset by an administrator. You can now log in to your Tru-Scapes® account using your new password.</p>
         <div class="details">
           <h2>Your New Login Credentials:</h2>
@@ -188,6 +188,28 @@ export class EmailService {
         </div>
         <p><strong>Important Security Notice:</strong> For your security, we strongly recommend that you change this password after logging in. You can do this by going to your account settings.</p>
         <p>If you did not request this password reset or have any concerns about your account security, please contact our support team immediately.</p>
+        <p>Thank you,</p>
+        <p>The Tru-Scapes® Team</p>
+      `,
+    });
+  }
+
+  async sendPasswordResetLinkEmail(to: string, customerName: string, resetLink: string) {
+    return this.sendEmail({
+      to,
+      subject: 'Reset Your Tru-Scapes® Password',
+      html: `
+        <p>Hello ${customerName},</p>
+        <p>We received a request to reset your password for your Tru-Scapes® account. If you made this request, please click the button below to reset your password.</p>
+        <div class="details">
+          <p style="text-align: center;">
+            <a href="${resetLink}" class="button" style="background-color: #4CAF50; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; display: inline-block;">Reset Your Password</a>
+          </p>
+          <p><strong>Or copy and paste this link into your browser:</strong></p>
+          <p style="word-break: break-all; background-color: #f9f9f9; padding: 10px; border-radius: 4px;">${resetLink}</p>
+        </div>
+        <p><strong>Important:</strong> This link will expire in 1 hour for security reasons. If you didn't request this password reset, please ignore this email or contact our support team if you have concerns.</p>
+        <p>If you're having trouble clicking the button, copy and paste the URL above into your web browser.</p>
         <p>Thank you,</p>
         <p>The Tru-Scapes® Team</p>
       `,

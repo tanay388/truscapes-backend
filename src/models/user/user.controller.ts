@@ -35,6 +35,7 @@ import { AdminOnly } from './decorator/admin-only.decorator';
 import { SearchUserDto } from './dto/search-user.dto';
 import { CreateUserByAdminDto } from './dto/create-user-by-admin.dto';
 import { ResetPasswordByAdminDto } from './dto/reset-password-by-admin.dto';
+import { ForgotPasswordDto } from './dto/forgot-password.dto';
 
 @FirebaseSecure()
 @ApiTags('User Controller')
@@ -68,6 +69,13 @@ export class UserController {
   @ApiOperation({ summary: 'Reset user password (Admin only)' })
   resetPasswordByAdmin(@Body() dto: ResetPasswordByAdminDto, @FUser() admin: FirebaseUser) {
     return this.userService.resetPasswordByAdmin(dto, admin.uid);
+  }
+
+  @Post('forgot-password')
+  @Public()
+  @ApiOperation({ summary: 'Send password reset link to user email' })
+  forgotPassword(@Body() dto: ForgotPasswordDto) {
+    return this.userService.forgotPassword(dto);
   }
 
   @Patch('admin/update-user/:id')
