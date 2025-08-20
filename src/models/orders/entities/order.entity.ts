@@ -1,6 +1,7 @@
 import { BaseClassEntity } from 'src/common/entities/base.extend-entity';
 import { Product } from 'src/models/products/entities/product.entity';
 import { User } from 'src/models/user/entities/user.entity';
+import { Coupon } from 'src/models/coupons/entities/coupon.entity';
 import { Entity, Column, ManyToOne, OneToMany, JoinColumn } from 'typeorm';
 import { OrderItem } from './order-item.entity';
 
@@ -54,6 +55,16 @@ export class Order extends BaseClassEntity {
 
   @Column('decimal', { precision: 10, scale: 2 })
   shippingCost: number;
+
+  @Column('decimal', { precision: 10, scale: 2, default: 0 })
+  discountAmount: number;
+
+  @ManyToOne(() => Coupon, { nullable: true, eager: true })
+  @JoinColumn()
+  appliedCoupon: Coupon;
+
+  @Column({ nullable: true })
+  couponCode: string;
 
   @Column('decimal', { precision: 10, scale: 2 })
   total: number;

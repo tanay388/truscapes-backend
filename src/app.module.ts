@@ -21,6 +21,7 @@ import { OrdersModule } from './models/orders/orders.module';
 import { EmailModule } from './providers/email/email.module';
 import { EmailsModule } from './models/emails/emails.module';
 import { AnalyticsModule } from './models/analytics/analytics.module';
+import { CouponsModule } from './models/coupons/coupons.module';
 
 @Module({
   imports: [
@@ -50,6 +51,7 @@ import { AnalyticsModule } from './models/analytics/analytics.module';
     EmailModule,
     EmailsModule,
     AnalyticsModule,
+    CouponsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

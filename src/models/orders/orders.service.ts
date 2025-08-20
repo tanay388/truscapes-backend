@@ -14,6 +14,7 @@ import { NotificationService } from 'src/providers/notification/notification.ser
 import { Transaction, TransactionType } from '../transactions/entities/transaction.entity';
 import { EmailService } from 'src/providers/email/email.service';
 import { AdminEmailEntity } from '../emails/entities/admin-email.entity';
+import { CouponsService } from '../coupons/coupons.service';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import * as PDFDocument from 'pdfkit';
 import { LessThan } from 'typeorm';
@@ -25,6 +26,7 @@ export class OrdersService {
     private readonly paymentGatewayService: PaymentGatewayService,
     private readonly notificationService: NotificationService,
     private readonly emailService: EmailService,
+    private readonly couponsService: CouponsService,
   ) {}
 
   async generateOrderPdf(orderId: number) {
@@ -248,21 +250,38 @@ export class OrdersService {
     const totalsStartX = 350;
     const totalsWidth = 195;
     const totalsStartY = doc.y;
+    
+    // Calculate height based on whether coupon is applied
+    const hasCoupon = order.discountAmount && order.discountAmount > 0;
+    const totalsHeight = hasCoupon ? 110 : 90;
 
-    doc.rect(totalsStartX, totalsStartY, totalsWidth, 90).stroke();
+    doc.rect(totalsStartX, totalsStartY, totalsWidth, totalsHeight).stroke();
     doc.fontSize(12)
       .text('Subtotal:', totalsStartX + 10, totalsStartY + 15)
       .text(`$${parseFloat(order.subtotal.toString()).toFixed(2)}`, totalsStartX + 10, totalsStartY + 15, { width: totalsWidth - 20, align: 'right' })
       .text('Shipping:', totalsStartX + 10, totalsStartY + 35)
       .text(`$${parseFloat(order.shippingCost.toString()).toFixed(2)}`, totalsStartX + 10, totalsStartY + 35, { width: totalsWidth - 20, align: 'right' });
 
-    doc.rect(totalsStartX, totalsStartY + 55, totalsWidth, 35).fill('#f0f0f0').stroke();
+    // Add coupon discount if applied
+    let totalSectionY = totalsStartY + 55;
+    if (hasCoupon) {
+      doc.text('Coupon Discount:', totalsStartX + 10, totalsStartY + 55)
+        .text(`-$${parseFloat(order.discountAmount.toString()).toFixed(2)}`, totalsStartX + 10, totalsStartY + 55, { width: totalsWidth - 20, align: 'right' });
+      if (order.couponCode) {
+        doc.fontSize(10)
+          .text(`(${order.couponCode})`, totalsStartX + 10, totalsStartY + 70, { width: totalsWidth - 20, align: 'right' })
+          .fontSize(12);
+      }
+      totalSectionY = totalsStartY + 75;
+    }
+
+    doc.rect(totalsStartX, totalSectionY, totalsWidth, 35).fill('#f0f0f0').stroke();
     doc.fillColor('black').fontSize(14).font('Helvetica-Bold')
-      .text('Total:', totalsStartX + 10, totalsStartY + 65)
-      .text(`$${parseFloat(order.total.toString()).toFixed(2)}`, totalsStartX + 10, totalsStartY + 65, { width: totalsWidth - 20, align: 'right' });
+      .text('Total:', totalsStartX + 10, totalSectionY + 10)
+      .text(`$${parseFloat(order.total.toString()).toFixed(2)}`, totalsStartX + 10, totalSectionY + 10, { width: totalsWidth - 20, align: 'right' });
 
     // Payment Information Section
-    doc.y = totalsStartY + 100;
+    doc.y = totalSectionY + 45;
     checkPageBreak(80);
     doc.fontSize(16).font('Helvetica-Bold').text('Payment Information', { underline: true });
     doc.fontSize(12).font('Helvetica').moveDown(0.5);
@@ -324,6 +343,7 @@ export class OrdersService {
         .leftJoinAndSelect('order.items', 'items')
         .leftJoinAndSelect('items.product', 'product')
         .leftJoinAndSelect('items.variant', 'variant')
+        .leftJoinAndSelect('order.appliedCoupon', 'appliedCoupon')
         .orderBy('order.createdAt', 'DESC');
 
       // Apply filters
@@ -357,7 +377,7 @@ export class OrdersService {
         'Order ID', 'Date', 'Status', 'Payment Status',
         'Customer Name', 'Customer Email',
         'Product Name', 'Variant', 'Quantity', 'Price', 'Item Total',
-        'Subtotal', 'Shipping Cost', 'Total',
+        'Subtotal', 'Shipping Cost', 'Coupon Code', 'Discount Amount', 'Total',
         'Shipping Address', 'Notes', 'Tracking Number'
       ]], { origin: 'A1' });
 
@@ -379,6 +399,8 @@ export class OrdersService {
            'Item Total': item?.total || 0,
            'Subtotal': order?.subtotal || 0,
            'Shipping Cost': order?.shippingCost || 0,
+           'Coupon Code': order?.couponCode || '',
+           'Discount Amount': order?.discountAmount || 0,
            'Total': order?.total || 0,
            'Shipping Address': order?.shippingAddress ? `${order.shippingAddress.street || ''}, ${order.shippingAddress.city || ''}, ${order.shippingAddress.state || ''}, ${order.shippingAddress.country || ''} ${order.shippingAddress.zipCode || ''}`.trim() : 'N/A',
            'Notes': order?.notes || '',
@@ -504,15 +526,42 @@ export class OrdersService {
       shippingCost = 0;
     }
 
+    // Handle coupon application
+    let discountAmount = 0;
+    let appliedCoupon = null;
+    let couponCode = null;
+    
+    if (createOrderDto.couponCode) {
+      const couponValidation = await this.couponsService.validateAndApplyCoupon(
+        {
+          couponCode: createOrderDto.couponCode,
+          orderAmount: subtotal + shippingCost,
+        },
+        userId,
+      );
+
+      if (!couponValidation.isValid) {
+        throw new BadRequestException(couponValidation.message);
+      }
+
+      discountAmount = couponValidation.discountAmount || 0;
+      appliedCoupon = couponValidation.coupon;
+      couponCode = createOrderDto.couponCode;
+    }
+
     console.log('subtotal' + ' ' + subtotal);
     console.log('shippingCost' + ' ' + shippingCost);
-    console.log('total' + ' ' + (subtotal + shippingCost));
+    console.log('discountAmount' + ' ' + discountAmount);
+    console.log('total' + ' ' + (subtotal + shippingCost - discountAmount));
 
     order.items = orderItems;
     order.subtotal = subtotal;
     order.shippingCost = shippingCost;
+    order.discountAmount = discountAmount;
+    order.appliedCoupon = appliedCoupon;
+    order.couponCode = couponCode;
     order.total =
-      parseFloat(subtotal.toString()) + parseFloat(shippingCost.toString()); // Add shippingCost;
+      parseFloat(subtotal.toString()) + parseFloat(shippingCost.toString()) - parseFloat(discountAmount.toString());
     order.status = OrderStatus.PAYMENT_PENDING;
     order.paymentStatus = PaymentStatus.PENDING;
 
@@ -532,6 +581,17 @@ export class OrdersService {
       order.status = OrderStatus.CONFIRMED;
       order.paymentIntentId = 'wallet';
       await order.save();
+
+      // Record coupon usage if coupon was applied
+      if (appliedCoupon && discountAmount > 0) {
+        await this.couponsService.recordCouponUsage(
+          appliedCoupon.id,
+          userId,
+          order.id.toString(),
+          discountAmount,
+          subtotal + shippingCost,
+        );
+      }
 
       const transaction = new Transaction();
       transaction.user = user;
@@ -584,6 +644,18 @@ export class OrdersService {
       order.paymentIntentId = payment.transactionId;
       order.status = OrderStatus.CONFIRMED;
       await order.save();
+
+      // Record coupon usage if coupon was applied
+      if (appliedCoupon && discountAmount > 0) {
+        await this.couponsService.recordCouponUsage(
+          appliedCoupon.id,
+          userId,
+          order.id.toString(),
+          discountAmount,
+          subtotal + shippingCost,
+        );
+      }
+
       return {
         success: true,
         message: `Successfully processed payment for order #${order.id}`,
@@ -631,7 +703,8 @@ export class OrdersService {
       .leftJoinAndSelect('order.user', 'user')
       .leftJoinAndSelect('order.items', 'items')
       .leftJoinAndSelect('items.product', 'product')
-      .leftJoinAndSelect('items.variant', 'variant');
+      .leftJoinAndSelect('items.variant', 'variant')
+      .leftJoinAndSelect('order.appliedCoupon', 'appliedCoupon');
 
     try {
       // Apply filters if they exist
@@ -678,6 +751,7 @@ export class OrdersService {
           product: true,
           variant: true,
         },
+        appliedCoupon: true,
       },
       withDeleted: true, // This enables including soft deleted records
       relationLoadStrategy: 'query',
@@ -695,6 +769,7 @@ export class OrdersService {
           product: true,
           variant: true,
         },
+        appliedCoupon: true,
       },
       withDeleted: true, // This enables including soft deleted records
       relationLoadStrategy: 'query',

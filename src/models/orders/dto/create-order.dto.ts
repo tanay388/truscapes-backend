@@ -98,6 +98,11 @@ export class CreateOrderDto {
   @IsString()
   paymentOrder?: string;
 
+  @ApiPropertyOptional({ description: 'Coupon code to apply', required: false })
+  @IsOptional()
+  @IsString()
+  couponCode?: string;
+
   @ApiPropertyOptional({ type: CardInfo, required: false })
   @IsOptional()
   @IsObject()
