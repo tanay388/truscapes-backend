@@ -38,6 +38,7 @@ export class OrdersService {
           variant: true,
         },
         user: true,
+        appliedCoupon: true,
       },
     });
 
@@ -52,24 +53,21 @@ export class OrdersService {
     if (order.paymentIntentId === 'wallet') {
       paymentMethod = 'Wallet';
     } else if (order.paymentIntentId && order.paymentIntentId.startsWith('cs_')) {
-      paymentMethod = 'Stripe';
+      paymentMethod = 'Credit Card';
       try {
-        // Retrieve Stripe session and invoice details
         const session = await this.paymentGatewayService['stripe'].checkout.sessions.retrieve(order.paymentIntentId);
-        console.log('Stripe session:', session);
         if (session.invoice) {
           const invoice = await this.paymentGatewayService['stripe'].invoices.retrieve(session.invoice as string);
           stripeInvoiceUrl = invoice.hosted_invoice_url;
         }
-        console.log('Stripe invoice URL:', stripeInvoiceUrl);
       } catch (error) {
         console.error('Error retrieving Stripe invoice:', error);
       }
     }
 
-    // Initialize PDF with proper page settings
+    // Initialize PDF with modern settings
     const doc = new PDFDocument({
-      margins: { top: 50, bottom: 50, left: 50, right: 50 },
+      margins: { top: 40, bottom: 40, left: 40, right: 40 },
       size: 'A4',
       autoFirstPage: true,
     });
@@ -78,249 +76,425 @@ export class OrdersService {
     doc.on('data', (chunk) => chunks.push(chunk));
     doc.on('end', () => {});
 
+    // Helper function for text wrapping
+    const wrapText = (text: string, maxWidth: number, fontSize: number = 10) => {
+      doc.fontSize(fontSize);
+      const words = text.split(' ');
+      const lines = [];
+      let currentLine = '';
+      
+      for (const word of words) {
+        const testLine = currentLine ? `${currentLine} ${word}` : word;
+        const testWidth = doc.widthOfString(testLine);
+        
+        if (testWidth <= maxWidth) {
+          currentLine = testLine;
+        } else {
+          if (currentLine) {
+            lines.push(currentLine);
+            currentLine = word;
+          } else {
+            lines.push(word);
+          }
+        }
+      }
+      
+      if (currentLine) {
+        lines.push(currentLine);
+      }
+      
+      return lines;
+    };
+
     // Helper function to check if we need a new page
     const checkPageBreak = (requiredSpace: number) => {
-      if (doc.y + requiredSpace > doc.page.height - 50) {
+      if (doc.y + requiredSpace > doc.page.height - 60) {
         doc.addPage();
         return true;
       }
       return false;
     };
 
-    // Company Info
-    doc.fontSize(10)
-      .text('Tru-Scapes®', { align: 'right' })
-      .text('https://shop.tru-scapes.com', { align: 'right', underline: true })
-      .moveDown(0.5);
-
-    // Header
+    // Modern Header with Company Branding
+    const headerHeight = 80;
+    doc.rect(40, 40, 515, headerHeight).fill('#2563eb').stroke();
+    
+    // Company name and logo area
+    doc.fillColor('white')
+      .fontSize(28)
+      .font('Helvetica-Bold')
+      .text('Tru-Scapes', 60, 65);
+    
+    doc.fontSize(12)
+      .font('Helvetica')
+      .text('Premium Landscaping Solutions', 60, 95);
+    
+    // Invoice title
     doc.fontSize(24)
-      .text('Order Details', { align: 'center' })
-      .moveDown(0.5)
-      .lineWidth(1)
-      .lineCap('butt')
-      .moveTo(50, doc.y)
-      .lineTo(545, doc.y)
-      .stroke()
-      .moveDown();
+      .font('Helvetica-Bold')
+      .text('INVOICE', 450, 65, { align: 'right' });
+    
+    doc.fontSize(12)
+      .font('Helvetica')
+      .text(`#${order.id}`, 450, 95, { align: 'right' });
 
-    // Order Summary Section
-    checkPageBreak(100);
-    doc.fontSize(16).text('Order Summary', { underline: true });
-    doc.fontSize(12).moveDown(0.5);
+    doc.y = 140;
+    doc.fillColor('black');
 
-    const summaryStartY = doc.y;
-    doc.text(`Order ID: #${order.id}`, 50, summaryStartY)
-      .text(`Order Date: ${new Date(order.createdAt).toLocaleString()}`, 50, summaryStartY + 20)
-      .text(`Status: ${order.status}`, 300, summaryStartY)
-      .text(`Purchase Order: ${order.paymentOrder || 'N/A'}`, 300, summaryStartY + 20)
-      .text(`Payment Method: ${paymentMethod}`, 50, summaryStartY + 40);
+    // Order Information Cards
+    const cardY = doc.y;
+    const cardHeight = 100;
+    const cardWidth = 240;
+    const cardSpacing = 20;
 
-    // Add Stripe invoice link if available (moved to Payment Information section)
-    // if (stripeInvoiceUrl) {
-    //   doc.text('Stripe Invoice: ', 300, summaryStartY + 40)
-    //     .text(stripeInvoiceUrl, 380, summaryStartY + 40, { 
-    //       underline: true, 
-    //       link: stripeInvoiceUrl,
-    //       width: 165
-    //     });
-    // }
+    // Order Details Card
+    doc.rect(40, cardY, cardWidth, cardHeight).fill('#f8fafc').stroke('#e2e8f0');
+    doc.fillColor('#1e293b')
+      .fontSize(14)
+      .font('Helvetica-Bold')
+      .text('Order Details', 55, cardY + 15);
+    
+    doc.fontSize(11)
+      .font('Helvetica')
+      .fillColor('#475569')
+      .text('Order Date:', 55, cardY + 35)
+      .fillColor('#1e293b')
+      .text(new Date(order.createdAt).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      }), 55, cardY + 50)
+      .fillColor('#475569')
+      .text('Status:', 55, cardY + 65)
+      .fillColor('#059669')
+      .font('Helvetica-Bold')
+      .text(order.status.replace('_', ' ').toUpperCase(), 55, cardY + 80);
 
-    doc.moveDown(3);
+    // Customer Information Card
+    doc.rect(40 + cardWidth + cardSpacing, cardY, cardWidth, cardHeight).fill('#f8fafc').stroke('#e2e8f0');
+    doc.fillColor('#1e293b')
+      .fontSize(14)
+      .font('Helvetica-Bold')
+      .text('Customer Information', 55 + cardWidth + cardSpacing, cardY + 15);
+    
+    doc.fontSize(11)
+      .font('Helvetica')
+      .fillColor('#475569')
+      .text('Name:', 55 + cardWidth + cardSpacing, cardY + 35)
+      .fillColor('#1e293b')
+      .text(order.user.name, 55 + cardWidth + cardSpacing, cardY + 50)
+      .fillColor('#475569')
+      .text('Email:', 55 + cardWidth + cardSpacing, cardY + 65)
+      .fillColor('#1e293b')
+      .text(order.user.email, 55 + cardWidth + cardSpacing, cardY + 80, { width: cardWidth - 30, ellipsis: true });
 
-    // Customer Information Section
-    checkPageBreak(100);
-    doc.fontSize(16).text('Customer Information', { underline: true });
-    doc.fontSize(12).moveDown(0.5);
+    doc.y = cardY + cardHeight + 30;
 
-    const customerStartY = doc.y;
-    doc.rect(50, customerStartY, 495, 90).stroke();
-    doc.text(`Name: ${order.user.name}`, 60, customerStartY + 10)
-      .text(`Email: ${order.user.email}`, 60, customerStartY + 30)
-      .text(`Phone: ${order.user.phone || 'N/A'}`, 60, customerStartY + 50);
-
-    // Shipping Address
+    // Shipping Address Section
     if (order.shippingAddress) {
+      checkPageBreak(80);
+      doc.fillColor('#1e293b')
+        .fontSize(14)
+        .font('Helvetica-Bold')
+        .text('Shipping Address', 40, doc.y);
+      
       const addr = order.shippingAddress;
-      doc.text(`Shipping Address:`, 300, customerStartY + 10)
-        .text(`${addr.street}`, 300, customerStartY + 30)
-        .text(`${addr.city}, ${addr.state} ${addr.zipCode}`, 300, customerStartY + 50)
-        .text(`${addr.country}`, 300, customerStartY + 70);
+      const addressLines = [
+        addr.street,
+        `${addr.city}, ${addr.state} ${addr.zipCode}`,
+        addr.country
+      ].filter(line => line && line.trim());
+      
+      doc.fontSize(11)
+        .font('Helvetica')
+        .fillColor('#475569');
+      
+      let addressY = doc.y + 20;
+      addressLines.forEach(line => {
+        doc.text(line, 40, addressY);
+        addressY += 15;
+      });
+      
+      doc.y = addressY + 10;
     }
 
-    doc.y = customerStartY + 100;
-    doc.moveDown(2);
-
-    // Order Items Section
-    checkPageBreak(150);
-    doc.fontSize(16).text('Order Items', { underline: true });
-    doc.fontSize(12).moveDown(0.5);
-
-    const table = {
-      startX: 50,
-      width: 495,
-      columnWidths: {
-        product: 180,
-        sku: 80,
-        qty: 50,
-        price: 80,
-        total: 105,
-      },
-      rowHeight: 30,
+    // Modern Items Table
+    checkPageBreak(200);
+    doc.fillColor('#1e293b')
+      .fontSize(16)
+      .font('Helvetica-Bold')
+      .text('Order Items', 40, doc.y);
+    
+    doc.y += 25;
+    
+    const tableStartY = doc.y;
+    const tableWidth = 515;
+    const rowHeight = 50;
+    
+    // Responsive column widths
+    const columns = {
+      product: { width: 250, x: 40 },
+      qty: { width: 60, x: 290 },
+      price: { width: 100, x: 350 },
+      total: { width: 105, x: 450 }
     };
 
-    let currentY = doc.y;
-
     // Table Header
-    doc.rect(table.startX, currentY, table.width, table.rowHeight).fill('#f0f0f0').stroke();
-    doc.fillColor('black').font('Helvetica-Bold').fontSize(11);
-    
-    let xPos = table.startX + 5;
-    doc.text('Product', xPos, currentY + 8);
-    xPos += table.columnWidths.product;
-    doc.text('SKU', xPos, currentY + 8);
-    xPos += table.columnWidths.sku;
-    doc.text('Qty', xPos, currentY + 8, { align: 'center', width: table.columnWidths.qty });
-    xPos += table.columnWidths.qty;
-    doc.text('Price', xPos, currentY + 8, { align: 'right', width: table.columnWidths.price });
-    xPos += table.columnWidths.price;
-    doc.text('Total', xPos, currentY + 8, { align: 'right', width: table.columnWidths.total });
+    doc.rect(40, tableStartY, tableWidth, 40).fill('#f1f5f9').stroke('#e2e8f0');
+    doc.fillColor('#374151')
+      .fontSize(12)
+      .font('Helvetica-Bold')
+      .text('Product', columns.product.x + 10, tableStartY + 15)
+      .text('Qty', columns.qty.x + 10, tableStartY + 15)
+      .text('Unit Price', columns.price.x + 10, tableStartY + 15)
+      .text('Total', columns.total.x + 10, tableStartY + 15);
 
-    currentY += table.rowHeight;
-    doc.font('Helvetica').fontSize(10);
+    let currentRowY = tableStartY + 40;
 
-    // Table Rows
+    // Table Rows with proper text wrapping
     order.items.forEach((item, index) => {
-      // Check if we need a new page for this row
-      const pageBreakOccurred = checkPageBreak(table.rowHeight + 10);
+      const pageBreakOccurred = checkPageBreak(rowHeight + 20);
       
       if (pageBreakOccurred) {
-        // We're on a new page, redraw the header
-        currentY = doc.y;
-        doc.rect(table.startX, currentY, table.width, table.rowHeight).fill('#f0f0f0').stroke();
-        doc.fillColor('black').font('Helvetica-Bold').fontSize(11);
-        
-        let xPos = table.startX + 5;
-        doc.text('Product', xPos, currentY + 8);
-        xPos += table.columnWidths.product;
-        doc.text('SKU', xPos, currentY + 8);
-        xPos += table.columnWidths.sku;
-        doc.text('Qty', xPos, currentY + 8, { align: 'center', width: table.columnWidths.qty });
-        xPos += table.columnWidths.qty;
-        doc.text('Price', xPos, currentY + 8, { align: 'right', width: table.columnWidths.price });
-        xPos += table.columnWidths.price;
-        doc.text('Total', xPos, currentY + 8, { align: 'right', width: table.columnWidths.total });
-        
-        currentY += table.rowHeight;
-        doc.font('Helvetica').fontSize(10);
+        currentRowY = doc.y;
+        // Redraw header on new page
+        doc.rect(40, currentRowY, tableWidth, 40).fill('#f1f5f9').stroke('#e2e8f0');
+        doc.fillColor('#374151')
+          .fontSize(12)
+          .font('Helvetica-Bold')
+          .text('Product', columns.product.x + 10, currentRowY + 15)
+          .text('Qty', columns.qty.x + 10, currentRowY + 15)
+          .text('Unit Price', columns.price.x + 10, currentRowY + 15)
+          .text('Total', columns.total.x + 10, currentRowY + 15);
+        currentRowY += 40;
       }
 
       // Alternate row colors
-      if (index % 2 === 1) {
-        doc.rect(table.startX, currentY, table.width, table.rowHeight).fill('#fafafa').stroke();
-        doc.fillColor('black');
-      } else {
-        doc.rect(table.startX, currentY, table.width, table.rowHeight).stroke();
-      }
+      const rowColor = index % 2 === 0 ? '#ffffff' : '#f8fafc';
+      doc.rect(40, currentRowY, tableWidth, rowHeight).fill(rowColor).stroke('#e2e8f0');
 
+      // Product name with variant
       const itemName = item.variant
         ? `${item.product.name} (${item.variant.name})`
         : item.product.name;
-
-      const sku = item.variant?.sku || `P-${item.product.id}`;
       
-      let xPos = table.startX + 5;
-      doc.text(itemName, xPos, currentY + 8, { width: table.columnWidths.product - 10, ellipsis: true });
-      xPos += table.columnWidths.product;
-      doc.text(sku, xPos, currentY + 8, { width: table.columnWidths.sku - 5 });
-      xPos += table.columnWidths.sku;
-      doc.text(item.quantity.toString(), xPos, currentY + 8, { align: 'center', width: table.columnWidths.qty });
-      xPos += table.columnWidths.qty;
-      doc.text(`$${parseFloat(item.price.toString()).toFixed(2)}`, xPos, currentY + 8, { align: 'right', width: table.columnWidths.price - 5 });
-      xPos += table.columnWidths.price;
-      doc.text(`$${(parseFloat(item.price.toString()) * item.quantity).toFixed(2)}`, xPos, currentY + 8, { align: 'right', width: table.columnWidths.total - 5 });
+      const productLines = wrapText(itemName, columns.product.width - 20, 11);
+      
+      doc.fillColor('#1e293b')
+        .fontSize(11)
+        .font('Helvetica-Bold');
+      
+      let textY = currentRowY + 10;
+      productLines.slice(0, 2).forEach((line, lineIndex) => {
+        doc.text(line, columns.product.x + 10, textY + (lineIndex * 12));
+      });
+      
+      // SKU
+      const sku = item.variant?.sku || `P-${item.product.id}`;
+      doc.fontSize(9)
+        .font('Helvetica')
+        .fillColor('#6b7280')
+        .text(`SKU: ${sku}`, columns.product.x + 10, textY + 24);
 
-      currentY += table.rowHeight;
+      // Quantity
+      doc.fillColor('#1e293b')
+        .fontSize(12)
+        .font('Helvetica')
+        .text(item.quantity.toString(), columns.qty.x + 10, currentRowY + 20, { 
+          align: 'center', 
+          width: columns.qty.width - 20 
+        });
+
+      // Unit Price
+      doc.text(`$${parseFloat(item.price.toString()).toFixed(2)}`, columns.price.x + 10, currentRowY + 20, { 
+        align: 'right', 
+        width: columns.price.width - 20 
+      });
+
+      // Total
+      doc.fontSize(12)
+        .font('Helvetica-Bold')
+        .text(`$${(parseFloat(item.price.toString()) * item.quantity).toFixed(2)}`, columns.total.x + 10, currentRowY + 20, { 
+          align: 'right', 
+          width: columns.total.width - 20 
+        });
+
+      currentRowY += rowHeight;
     });
 
-    doc.y = currentY + 20;
+    doc.y = currentRowY + 30;
 
-    // Totals Section
-    checkPageBreak(120);
-    const totalsStartX = 350;
-    const totalsWidth = 195;
-    const totalsStartY = doc.y;
+    // Modern Totals Section
+    checkPageBreak(150);
+    const totalsX = 350;
+    const totalsWidth = 205;
+    const totalsY = doc.y;
     
-    // Calculate height based on whether coupon is applied
+    // Calculate height based on coupon
     const hasCoupon = order.discountAmount && order.discountAmount > 0;
-    const totalsHeight = hasCoupon ? 110 : 90;
+    const totalsHeight = hasCoupon ? 140 : 110;
 
-    doc.rect(totalsStartX, totalsStartY, totalsWidth, totalsHeight).stroke();
-    doc.fontSize(12)
-      .text('Subtotal:', totalsStartX + 10, totalsStartY + 15)
-      .text(`$${parseFloat(order.subtotal.toString()).toFixed(2)}`, totalsStartX + 10, totalsStartY + 15, { width: totalsWidth - 20, align: 'right' })
-      .text('Shipping:', totalsStartX + 10, totalsStartY + 35)
-      .text(`$${parseFloat(order.shippingCost.toString()).toFixed(2)}`, totalsStartX + 10, totalsStartY + 35, { width: totalsWidth - 20, align: 'right' });
+    doc.rect(totalsX, totalsY, totalsWidth, totalsHeight).fill('#f8fafc').stroke('#e2e8f0');
+    
+    // Subtotal
+    doc.fillColor('#6b7280')
+      .fontSize(12)
+      .font('Helvetica')
+      .text('Subtotal:', totalsX + 15, totalsY + 20)
+      .fillColor('#1e293b')
+      .text(`$${parseFloat(order.subtotal.toString()).toFixed(2)}`, totalsX + 15, totalsY + 20, { 
+        width: totalsWidth - 30, 
+        align: 'right' 
+      });
+    
+    // Shipping
+    doc.fillColor('#6b7280')
+      .text('Shipping:', totalsX + 15, totalsY + 40)
+      .fillColor('#1e293b')
+      .text(`$${parseFloat(order.shippingCost.toString()).toFixed(2)}`, totalsX + 15, totalsY + 40, { 
+        width: totalsWidth - 30, 
+        align: 'right' 
+      });
 
-    // Add coupon discount if applied
-    let totalSectionY = totalsStartY + 55;
+    let finalTotalY = totalsY + 60;
+    
+    // Coupon discount
     if (hasCoupon) {
-      doc.text('Coupon Discount:', totalsStartX + 10, totalsStartY + 55)
-        .text(`-$${parseFloat(order.discountAmount.toString()).toFixed(2)}`, totalsStartX + 10, totalsStartY + 55, { width: totalsWidth - 20, align: 'right' });
+      doc.fillColor('#dc2626')
+        .text('Discount:', totalsX + 15, totalsY + 60)
+        .text(`-$${parseFloat(order.discountAmount.toString()).toFixed(2)}`, totalsX + 15, totalsY + 60, { 
+          width: totalsWidth - 30, 
+          align: 'right' 
+        });
+      
       if (order.couponCode) {
         doc.fontSize(10)
-          .text(`(${order.couponCode})`, totalsStartX + 10, totalsStartY + 70, { width: totalsWidth - 20, align: 'right' })
-          .fontSize(12);
+          .fillColor('#6b7280')
+          .text(`(${order.couponCode})`, totalsX + 15, totalsY + 75, { 
+            width: totalsWidth - 30, 
+            align: 'right' 
+          });
       }
-      totalSectionY = totalsStartY + 75;
+      finalTotalY = totalsY + 90;
     }
 
-    doc.rect(totalsStartX, totalSectionY, totalsWidth, 35).fill('#f0f0f0').stroke();
-    doc.fillColor('black').fontSize(14).font('Helvetica-Bold')
-      .text('Total:', totalsStartX + 10, totalSectionY + 10)
-      .text(`$${parseFloat(order.total.toString()).toFixed(2)}`, totalsStartX + 10, totalSectionY + 10, { width: totalsWidth - 20, align: 'right' });
+    // Total line
+    doc.lineWidth(1)
+      .strokeColor('#e2e8f0')
+      .moveTo(totalsX + 15, finalTotalY)
+      .lineTo(totalsX + totalsWidth - 15, finalTotalY)
+      .stroke();
 
-    // Payment Information Section
-    doc.y = totalSectionY + 45;
-    checkPageBreak(80);
-    doc.fontSize(16).font('Helvetica-Bold').text('Payment Information', { underline: true });
-    doc.fontSize(12).font('Helvetica').moveDown(0.5);
+    // Final Total
+    doc.fillColor('#1e293b')
+      .fontSize(16)
+      .font('Helvetica-Bold')
+      .text('Total:', totalsX + 15, finalTotalY + 15)
+      .text(`$${parseFloat(order.total.toString()).toFixed(2)}`, totalsX + 15, finalTotalY + 15, { 
+        width: totalsWidth - 30, 
+        align: 'right' 
+      });
+
+    doc.y = totalsY + totalsHeight + 30;
+
+    // Payment Information
+    checkPageBreak(100);
+    doc.fillColor('#1e293b')
+      .fontSize(14)
+      .font('Helvetica-Bold')
+      .text('Payment Information', 40, doc.y);
     
-    doc.text(`Payment Method: ${paymentMethod}`);
-    doc.text(`Payment Status: ${order.paymentStatus}`);
+    doc.fontSize(11)
+      .font('Helvetica')
+      .fillColor('#475569')
+      .text('Payment Method:', 40, doc.y + 25)
+      .fillColor('#1e293b')
+      .text(paymentMethod, 140, doc.y + 25)
+      .fillColor('#475569')
+      .text('Payment Status:', 40, doc.y + 40)
+      .fillColor(order.paymentStatus === 'COMPLETED' ? '#059669' : '#dc2626')
+      .font('Helvetica-Bold')
+      .text(order.paymentStatus.replace('_', ' '), 140, doc.y + 40);
     
-    if (order.paymentIntentId && order.paymentIntentId !== 'wallet') {
-      doc.text(`Transaction ID: ${order.paymentIntentId}`);
-    }
     
-    if (stripeInvoiceUrl) {
-      doc.moveDown(0.5);
-      doc.text('Stripe Invoice: ', { continued: true })
-        .fillColor('blue')
-        .text(stripeInvoiceUrl, { underline: true, link: stripeInvoiceUrl })
-        .fillColor('black');
+    // Purchase Order if available
+    if (order.paymentOrder) {
+      doc.fillColor('#475569')
+        .text('Purchase Order:', 40, doc.y + 55)
+        .fillColor('#1e293b')
+        .text(order.paymentOrder, 140, doc.y + 55);
     }
 
-    // Notes Section (if any)
+    doc.y += 80;
+
+    // Notes Section
     if (order.notes || order.adminNotes) {
-      doc.moveDown(2);
-      checkPageBreak(60);
-      doc.fontSize(16).font('Helvetica-Bold').text('Notes', { underline: true });
-      doc.fontSize(12).font('Helvetica').moveDown(0.5);
+      checkPageBreak(100);
+      doc.fillColor('#1e293b')
+        .fontSize(14)
+        .font('Helvetica-Bold')
+        .text('Order Notes', 40, doc.y);
       
+      doc.fontSize(11)
+        .font('Helvetica')
+        .fillColor('#475569');
+      
+      let notesY = doc.y + 25;
       if (order.notes) {
-        doc.text(`Customer Notes: ${order.notes}`, { width: 495, align: 'left' });
+        doc.text(`Customer Notes: ${order.notes}`, 40, notesY, { 
+          width: 515, 
+          align: 'left',
+          lineGap: 3
+        });
+        notesY += 40;
       }
       if (order.adminNotes) {
-        doc.moveDown(0.5);
-        doc.text(`Admin Notes: ${order.adminNotes}`, { width: 495, align: 'left' });
+        doc.text(`Admin Notes: ${order.adminNotes}`, 40, notesY, { 
+          width: 515, 
+          align: 'left',
+          lineGap: 3
+        });
+        notesY += 40;
       }
+      
+      doc.y = notesY;
+    }
+
+    // Stripe invoice link if available
+    if (stripeInvoiceUrl) {
+      checkPageBreak(50);
+      doc.fillColor('#1e293b')
+        .fontSize(12)
+        .font('Helvetica')
+        .text('Online Invoice: ', 40, doc.y, { continued: true })
+        .fillColor('#2563eb')
+        .text('View Invoice', { underline: true, link: stripeInvoiceUrl });
+      
+      doc.y += 30;
     }
 
     // Footer
-    doc.moveDown(2);
-    doc.fontSize(10).text('Thank you for your business!', { align: 'center' });
-    doc.text('For questions about this order, please contact support@tru-scapes.com', { align: 'center' });
+    const footerY = doc.page.height - 80;
+    if (doc.y > footerY - 40) {
+      doc.addPage();
+    }
+    
+    doc.y = footerY;
+    doc.lineWidth(0.5)
+      .strokeColor('#e2e8f0')
+      .moveTo(40, footerY)
+      .lineTo(555, footerY)
+      .stroke();
+    
+    doc.fillColor('#6b7280')
+      .fontSize(10)
+      .font('Helvetica')
+      .text('Thank you for your business!', 40, footerY + 15)
+      .text('For questions about this invoice, contact us at support@tru-scapes.com', 40, footerY + 30)
+      .text(`Generated on ${new Date().toLocaleDateString('en-US')}`, 40, footerY + 45, { 
+        width: 515, 
+        align: 'right' 
+      });
 
     // Finalize PDF
     doc.end();
@@ -535,7 +709,7 @@ export class OrdersService {
       const couponValidation = await this.couponsService.validateAndApplyCoupon(
         {
           couponCode: createOrderDto.couponCode,
-          orderAmount: subtotal + shippingCost,
+          orderAmount: subtotal,
         },
         userId,
       );
@@ -669,6 +843,8 @@ export class OrdersService {
   async confirmPayment(orderId: number, userId: string) {
     const order = await Order.findOne({
       where: { id: orderId, user: { id: userId } },
+      relations: ['appliedCoupon'],
+      withDeleted: true,
     });
 
     if (!order) {
@@ -684,6 +860,17 @@ export class OrdersService {
     order.paymentStatus = PaymentStatus.COMPLETED;
     order.status = OrderStatus.CONFIRMED;
     await order.save();
+
+    // Record coupon usage if coupon was applied
+    if (order.appliedCoupon && order.discountAmount > 0) {
+        await this.couponsService.recordCouponUsage(
+          order.appliedCoupon.id,
+          userId,
+          order.id.toString(),
+          order.discountAmount,
+          order.subtotal + order.shippingCost,
+        );
+    }
 
     // Send notification
     await this.notificationService.sendNotificationToUser({
