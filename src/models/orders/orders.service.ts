@@ -407,22 +407,13 @@ export class OrdersService {
     doc.fontSize(11)
       .font('Helvetica')
       .fillColor('#475569')
-      .text('Payment Method:', 40, doc.y + 25)
-      .fillColor('#1e293b')
-      .text(paymentMethod, 140, doc.y + 25)
-      .fillColor('#475569')
-      .text('Payment Status:', 40, doc.y + 40)
-      .fillColor(order.paymentStatus === 'COMPLETED' ? '#059669' : '#dc2626')
-      .font('Helvetica-Bold')
-      .text(order.paymentStatus.replace('_', ' '), 140, doc.y + 40);
+      .text(`Payment Method: ${paymentMethod}`, 40, doc.y + 25);
     
     
     // Purchase Order if available
     if (order.paymentOrder) {
       doc.fillColor('#475569')
-        .text('Purchase Order:', 40, doc.y + 55)
-        .fillColor('#1e293b')
-        .text(order.paymentOrder, 140, doc.y + 55);
+        .text(`Purchase Order: ${order.paymentOrder}`, 40, doc.y + 55);
     }
 
     doc.y += 80;
