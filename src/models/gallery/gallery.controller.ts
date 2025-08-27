@@ -13,12 +13,13 @@ import {
 import { GalleryService } from './gallery.service';
 import { CreateGalleryDto } from './dto/create-gallery.dto';
 import { UpdateGalleryDto } from './dto/update-gallery.dto';
-import { ApiConsumes, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiConsumes, ApiTags } from '@nestjs/swagger';
 import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import { Pagination } from 'src/common/dtos/pagination.dto';
 
 @Controller('gallery')
 @ApiTags('Gallery')
+@ApiBearerAuth()
 export class GalleryController {
   constructor(private readonly galleryService: GalleryService) {}
 
@@ -55,5 +56,11 @@ export class GalleryController {
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.galleryService.remove(+id);
+  }
+
+  @Post('batch-update-urls')
+  async updateImageUrlsToSignedUrls(@Query('batchSize') batchSize?: number) {
+    const size = batchSize ? parseInt(batchSize.toString()) : 50;
+    return this.galleryService.updateImageUrlsToSignedUrls(size);
   }
 }
