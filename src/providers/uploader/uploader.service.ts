@@ -3,6 +3,7 @@ import { Injectable } from '@nestjs/common';
 import * as crypto from 'crypto';
 import { getStorage } from 'firebase-admin/storage';
 import { FirebaseService } from '../firebase/firebase.service';
+import mime from 'mime';
 
 export interface UploadedMulterFileI {
   fieldname: string;
@@ -29,46 +30,40 @@ export class UploaderService {
   }
 
   async uploadFile(
-    file: UploadedMulterFileI | string,
-    path = 'main',
-    { name, contentType }: UploaderInput = {},
-  ): Promise<string> {
-    try {
-      const data = typeof file === 'string' ? Buffer.from(file) : file.buffer;
-      name ??= typeof file === 'string' ? 'file' : file.originalname;
+  file: UploadedMulterFileI | string,
+  path = 'main',
+  { name, contentType }: UploaderInput = {},
+): Promise<string> {
+  try {
+    const data = typeof file === 'string' ? Buffer.from(file) : file.buffer;
+    name ??= typeof file === 'string' ? 'file' : file.originalname;
 
-      // Generate unique filename
-      const fileName = `${crypto
-        .randomBytes(32)
-        .toString('base64url')}-${name}`;
-      const fullPath = `${path}/${fileName}`;
+    // Generate unique filename
+    const fileName = `${crypto.randomBytes(32).toString('base64url')}-${name}`;
+    const fullPath = `${path}/${fileName}`;
 
-      // Create file in bucket
-      const fileRef = this.bucket.file(fullPath);
+    const fileRef = this.bucket.file(fullPath);
 
-      // Upload file with metadata
-      await fileRef.save(data, {
-        metadata: {
-          contentType:
-            contentType ||
-            (typeof file === 'string'
-              ? 'application/octet-stream'
-              : file.mimetype),
-        },
-      });
+    // Use mime-types lib to ensure correct contentType
+    const detectedContentType =
+      contentType ||
+      mime.lookup(name) || // e.g. "image/jpeg"
+      (typeof file === 'string' ? 'application/octet-stream' : file.mimetype);
 
-      // Make the file publicly accessible
-      await fileRef.makePublic();
+    await fileRef.save(data, {
+      metadata: {
+        contentType: detectedContentType,
+      },
+    });
 
-      // Get the public URL
-      const publicUrl = `https://storage.googleapis.com/${this.bucket.name}/${fullPath}`;
+    await fileRef.makePublic();
 
-      return publicUrl;
-    } catch (error) {
-      console.error('Error uploading file to Firebase Storage:', error);
-      throw error;
-    }
+    return `https://storage.googleapis.com/${this.bucket.name}/${fullPath}`;
+  } catch (error) {
+    console.error('Error uploading file to Firebase Storage:', error);
+    throw error;
   }
+}
 
   async uploadFiles(
     files?: (UploadedMulterFileI | string)[],
