@@ -140,7 +140,11 @@ export class CouponsService {
   }
 
   async deleteCoupon(id: string): Promise<void> {
+    const unique_string = crypto.randomUUID();
     const coupon = await this.getCouponById(id);
+    coupon.code = `${coupon.code}-${unique_string}`;
+    coupon.isActive = false;
+    await this.couponRepository.save(coupon);
     await this.couponRepository.softDelete(id);
   }
 

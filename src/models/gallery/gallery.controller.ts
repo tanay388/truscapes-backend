@@ -58,9 +58,4 @@ export class GalleryController {
     return this.galleryService.remove(+id);
   }
 
-  @Post('batch-update-urls')
-  async updateImageUrlsToSignedUrls(@Query('batchSize') batchSize?: number) {
-    const size = batchSize ? parseInt(batchSize.toString()) : 50;
-    return this.galleryService.updateImageUrlsToSignedUrls(size);
-  }
 }

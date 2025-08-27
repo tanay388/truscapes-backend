@@ -38,13 +38,20 @@ export class GalleryService {
   }
 
   async findAll(pagination: Pagination) {
-    return await Gallery.find({
+    const galleries = await Gallery.find({
       take: pagination.take,
       skip: pagination.skip,
       order: {
         createdAt: 'DESC',
       },
     });
+
+    for (const gallery of galleries) {
+      if (gallery.imageUrl.includes('tr')) {
+        gallery.imageUrl = await this.uploader.getSignedUrl(gallery.imageUrl);
+      }
+    }
+    return galleries;
   }
 
   findOne(id: number) {
