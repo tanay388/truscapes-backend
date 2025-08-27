@@ -38,7 +38,7 @@ export class GalleryService {
   }
 
   async findAll(pagination: Pagination) {
-    const galary=  await Gallery.find({
+    return await Gallery.find({
       take: pagination.take,
       skip: pagination.skip,
       order: {
