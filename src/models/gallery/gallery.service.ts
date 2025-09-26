@@ -45,12 +45,6 @@ export class GalleryService {
         createdAt: 'DESC',
       },
     });
-
-    for (const gallery of galleries) {
-      if (gallery.imageUrl.includes('tr')) {
-        gallery.imageUrl = await this.uploader.getSignedUrl(gallery.imageUrl);
-      }
-    }
     return galleries;
   }
 
