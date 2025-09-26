@@ -22,6 +22,8 @@ import { EmailModule } from './providers/email/email.module';
 import { EmailsModule } from './models/emails/emails.module';
 import { AnalyticsModule } from './models/analytics/analytics.module';
 import { CouponsModule } from './models/coupons/coupons.module';
+import { APP_FILTER } from '@nestjs/core';
+import { HttpErrorFilter } from './common/utils/error-log';
 
 @Module({
   imports: [
@@ -54,7 +56,13 @@ import { CouponsModule } from './models/coupons/coupons.module';
     CouponsModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+    providers: [
+    AppService,
+    {
+      provide: APP_FILTER,
+      useClass: HttpErrorFilter,
+    },
+  ],
 })
 export class AppModule {
   configure(consumer: MiddlewareConsumer): any {

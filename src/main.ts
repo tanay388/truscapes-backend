@@ -10,6 +10,7 @@ import * as morgan from 'morgan';
 import * as cookieParser from 'cookie-parser';
 import * as expressBasicAuth from 'express-basic-auth';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { HttpErrorFilter } from './common/utils/error-log';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
