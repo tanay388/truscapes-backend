@@ -7,18 +7,23 @@ import { ILike } from 'typeorm';
 import { CreateProductVariantDto } from './dto/create-product-variant.dto';
 import { ProductVariant } from './entities/product-variant.entity';
 import { UpdateProductVariantDto } from './dto/update-product-variant.dto';
+import { error } from 'console';
 
 @Injectable()
 export class ProductsService {
   async create(createProductDto: CreateProductDto) {
     // Ensure new products start as DRAFT since they won't have variants initially
-    const product = await Product.save({
-      ...createProductDto,
-      state: ProductStatus.DRAFT, // Force new products to start as DRAFT
-      category: { id: createProductDto.categoryId },
-    });
-
-    return product;
+    try {
+      const product = await Product.save({
+        ...createProductDto,
+        state: ProductStatus.DRAFT, // Force new products to start as DRAFT
+        category: { id: createProductDto.categoryId },
+      });
+      return product;
+    } catch (error) {
+      console.error('Error creating product:', error);
+      throw error;
+    }
   }
 
   async addVariant(
