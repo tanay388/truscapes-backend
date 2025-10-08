@@ -595,10 +595,10 @@ export class OrdersService {
   }
 
   calculateShipping = (subtotal: number) => {
-    if (subtotal >= 2500) {
+    if (subtotal >= 0) {
       return 0; // Free shipping for orders $2500 and above
     }
-    const shippingCost =  subtotal * 0.05; // 15% shipping for orders under $2500
+    const shippingCost =  subtotal * 0.05; // 5% shipping for orders under $2500
     return Math.max(shippingCost, 10);
   };
 
