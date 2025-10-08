@@ -97,13 +97,17 @@ export class OrdersController {
     @Param('id', ParseIntPipe) id: number,
     @Res({ passthrough: true }) res: Response,
   ) {
-    const { buffer, filename } = await this.ordersService.generateOrderPdf(id);
+    const { stream, filename } = await this.ordersService.generateOrderPdf(id);
+    // Ensure cleanup if client disconnects mid-stream
+    res.on('close', () => {
+      try { stream.destroy(); } catch {}
+    });
     res.set({
       'Content-Type': 'application/pdf',
       'Content-Disposition': `attachment; filename=${filename}`,
-      'Content-Length': buffer.length,
+      'Cache-Control': 'no-store',
     });
-    return new StreamableFile(buffer);
+    return new StreamableFile(stream);
   }
 
   @Patch(':id')

@@ -17,6 +17,7 @@ import { AdminEmailEntity } from '../emails/entities/admin-email.entity';
 import { CouponsService } from '../coupons/coupons.service';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import * as PDFDocument from 'pdfkit';
+import { PassThrough } from 'stream';
 import { LessThan } from 'typeorm';
 import * as XLSX from 'xlsx';
 
@@ -30,6 +31,7 @@ export class OrdersService {
   ) {}
 
   async generateOrderPdf(orderId: number) {
+    const startTime = Date.now();
     const order = await Order.findOne({
       where: { id: orderId },
       relations: {
@@ -55,26 +57,37 @@ export class OrdersService {
     } else if (order.paymentIntentId && order.paymentIntentId.startsWith('cs_')) {
       paymentMethod = 'Credit Card';
       try {
-        const session = await this.paymentGatewayService['stripe'].checkout.sessions.retrieve(order.paymentIntentId);
-        if (session.invoice) {
-          const invoice = await this.paymentGatewayService['stripe'].invoices.retrieve(session.invoice as string);
-          stripeInvoiceUrl = invoice.hosted_invoice_url;
-        }
+        const stripeClient = this.paymentGatewayService['stripe'];
+        const invoiceUrlPromise = (async () => {
+          const session = await stripeClient.checkout.sessions.retrieve(order.paymentIntentId);
+          if (session.invoice) {
+            const invoice = await stripeClient.invoices.retrieve(session.invoice as string);
+            return invoice.hosted_invoice_url || null;
+          }
+          return null;
+        })();
+        // Avoid long waits on Stripe by timing out quickly
+        stripeInvoiceUrl = await Promise.race([
+          invoiceUrlPromise,
+          new Promise<string | null>((resolve) => setTimeout(() => resolve(null), 1500)),
+        ]);
       } catch (error) {
         console.error('Error retrieving Stripe invoice:', error);
       }
     }
 
-    // Initialize PDF with modern settings
+    // Initialize PDF with modern settings (with defensive error handling)
+    const stream = new PassThrough();
     const doc = new PDFDocument({
       margins: { top: 40, bottom: 40, left: 40, right: 40 },
       size: 'A4',
       autoFirstPage: true,
     });
-    const chunks: Buffer[] = [];
-
-    doc.on('data', (chunk) => chunks.push(chunk));
-    doc.on('end', () => {});
+    doc.on('error', (err) => {
+      try { stream.destroy(err); } catch {}
+    });
+    stream.on('error', () => {});
+    doc.pipe(stream);
 
     // Helper function for text wrapping
     const wrapText = (text: string, maxWidth: number, fontSize: number = 10) => {
@@ -413,14 +426,14 @@ export class OrdersService {
     // Purchase Order if available
     if (order.paymentOrder) {
       doc.fillColor('#475569')
-        .text(`Purchase Order: ${order.paymentOrder}`, 40, doc.y + 55);
+        .text(`Purchase Order: ${order.paymentOrder}`, 40, doc.y + 10);
     }
 
-    doc.y += 80;
+    doc.y += 10;
 
     // Notes Section
     if (order.notes || order.adminNotes) {
-      checkPageBreak(100);
+      checkPageBreak(40);
       doc.fillColor('#1e293b')
         .fontSize(14)
         .font('Helvetica-Bold')
@@ -461,15 +474,11 @@ export class OrdersService {
         .fillColor('#2563eb')
         .text('View Invoice', { underline: true, link: stripeInvoiceUrl });
       
-      doc.y += 30;
+      doc.y += 15;
     }
 
     // Footer
-    const footerY = doc.page.height - 80;
-    if (doc.y > footerY - 40) {
-      doc.addPage();
-    }
-    
+    const footerY = doc.y;
     doc.y = footerY;
     doc.lineWidth(0.5)
       .strokeColor('#e2e8f0')
@@ -482,23 +491,19 @@ export class OrdersService {
       .font('Helvetica')
       .text('Thank you for your business!', 40, footerY + 15)
       .text('For questions about this invoice, contact us at support@tru-scapes.com', 40, footerY + 30)
-      .text(`Generated on ${new Date().toLocaleDateString('en-US')}`, 40, footerY + 45, { 
-        width: 515, 
-        align: 'right' 
-      });
+      
 
     // Finalize PDF
+    doc.on('end', () => {
+      try {
+        const duration = Date.now() - startTime;
+        console.log(`generateOrderPdf(${orderId}) completed in ${duration} ms`);
+      } catch {}
+    });
     doc.end();
 
-    // Return the PDF buffer when it's ready
-    return new Promise<{ buffer: Buffer; filename: string }>((resolve) => {
-      doc.on('end', () => {
-        resolve({
-          buffer: Buffer.concat(chunks),
-          filename: `order-${order.id}.pdf`
-        });
-      });
-    });
+    // Return a stream to avoid buffering entire PDF in memory
+    return { stream, filename: `order-${order.id}.pdf` };
   }
 
   async exportOrdersToExcel(filter: OrderFilterDto) {
