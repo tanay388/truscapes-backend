@@ -140,12 +140,6 @@ export class OrdersService {
     stream.on('error', (err) => {
       try { console.error('[OrderPDF]', { orderId, event: 'stream-error', error: err }); } catch {}
     });
-    stream.on('close', () => {
-      try { console.log('[OrderPDF]', { orderId, event: 'stream-close' }); } catch {}
-    });
-    stream.on('finish', () => {
-      try { console.log('[OrderPDF]', { orderId, event: 'stream-finish' }); } catch {}
-    });
     doc.pipe(stream);
     logStep('pdf-init');
 
@@ -327,8 +321,6 @@ export class OrdersService {
 
     let currentRowY = tableStartY + 40;
 
-    // Table Rows with proper text wrapping
-    console.log('[OrderPDF]', { orderId, event: 'items-start', count: order.items.length });
     order.items.forEach((item, index) => {
       const pageBreakOccurred = checkPageBreak(rowHeight + 20);
       
@@ -563,12 +555,12 @@ export class OrdersService {
       
 
     // Finalize PDF
-    doc.on('end', () => {
-      try {
-        const duration = Date.now() - startTime;
-        console.log('[OrderPDF]', { orderId, event: 'doc-end', totalMs: duration });
-      } catch {}
-    });
+    // doc.on('end', () => {
+    //   try {
+    //     const duration = Date.now() - startTime;
+    //     console.log('[OrderPDF]', { orderId, event: 'doc-end', totalMs: duration });
+    //   } catch {}
+    // });
     logStep('doc-end-call');
     doc.end();
 
