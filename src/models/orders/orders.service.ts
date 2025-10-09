@@ -20,15 +20,23 @@ import * as PDFDocument from 'pdfkit';
 import { PassThrough } from 'stream';
 import { LessThan } from 'typeorm';
 import * as XLSX from 'xlsx';
+import Stripe from 'stripe';
 
 @Injectable()
 export class OrdersService {
+  private stripe: Stripe;
+
   constructor(
     private readonly paymentGatewayService: PaymentGatewayService,
     private readonly notificationService: NotificationService,
     private readonly emailService: EmailService,
     private readonly couponsService: CouponsService,
-  ) {}
+  ) {
+        // Initialize Stripe
+    this.stripe = new Stripe(process.env.STRIPE_SECRET, {
+      apiVersion: '2023-10-16',
+    });
+  }
 
   async generateOrderPdf(orderId: number) {
     const startTime = Date.now();
@@ -1007,42 +1015,32 @@ export class OrdersService {
   }
 
   async findOne(id: number, userId: string) {
-    const order = await Order.findOne({
-      where: { id },
-      relations: {
-        items: {
-          product: true,
-          variant: true,
-        },
-        appliedCoupon: true,
-      },
-      withDeleted: true, // This enables including soft deleted records
-      relationLoadStrategy: 'query',
-      loadRelationIds: false,
-    });
+    const order = await Order.getRepository()
+      .createQueryBuilder('order')
+      .leftJoinAndSelect('order.items', 'items')
+      .leftJoinAndSelect('items.product', 'product')
+      .leftJoinAndSelect('items.variant', 'variant')
+      .leftJoinAndSelect('order.appliedCoupon', 'appliedCoupon')
+      .where('order.id = :id', { id })
+      .withDeleted()
+      .getOne();
+
+      if(order.paymentIntentId && order.paymentIntentId.startsWith('cs_')){
+    const pi = await this.stripe.checkout.sessions.retrieve(order.paymentIntentId, {
+      expand: [
+        'payment_intent',
+        'invoice' // sometimes useful
+      ]
+    });}
+
+    // order.paymentIntentId = pi.payment_intent;
+
 
     if (!order) {
       throw new NotFoundException('Order not found');
     }
 
-    // Transform the items to ensure deleted products/variants are included
-    // for (const item of order.items) {
-    //   // Load product with deleted
-    //   if (item.productId) {
-    //     item.product = await Product.findOne({
-    //       where: { id: item.productId },
-    //       withDeleted: true,
-    //     });
-    //   }
-
-    //   // Load variant with deleted
-    //   if (item.variantId) {
-    //     item.variant = await ProductVariant.findOne({
-    //       where: { id: item.variantId },
-    //       withDeleted: true,
-    //     });
-    //   }
-    // }
+    // return pi;
 
     return order;
   }

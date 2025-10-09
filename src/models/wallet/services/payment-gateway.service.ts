@@ -116,6 +116,9 @@ export class PaymentGatewayService {
             quantity: 1,
           },
         ],
+        invoice_creation: {
+          enabled: true,
+        },
         currency: 'usd',
         payment_method_types: ['card'],
         metadata: {
