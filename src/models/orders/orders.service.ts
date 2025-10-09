@@ -968,6 +968,7 @@ export class OrdersService {
       .leftJoinAndSelect('items.product', 'product')
       .leftJoinAndSelect('items.variant', 'variant')
       .leftJoinAndSelect('order.appliedCoupon', 'appliedCoupon')
+      .leftJoinAndSelect('order.user', 'user')
       .where('order.id = :id', { id })
       .withDeleted()
       .getOne();
