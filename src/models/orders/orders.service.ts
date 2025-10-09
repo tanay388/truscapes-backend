@@ -32,17 +32,62 @@ export class OrdersService {
 
   async generateOrderPdf(orderId: number) {
     const startTime = Date.now();
-    const order = await Order.findOne({
-      where: { id: orderId },
-      relations: {
-        items: {
-          product: true,
-          variant: true,
-        },
-        user: true,
-        appliedCoupon: true,
-      },
-    });
+    let lastMark = startTime;
+    const logStep = (event: string, extra: Record<string, any> = {}) => {
+      const now = Date.now();
+      const delta = now - lastMark;
+      const total = now - startTime;
+      lastMark = now;
+      try {
+        console.log('[OrderPDF]', { orderId, event, deltaMs: delta, totalMs: total, ...extra });
+      } catch {}
+    };
+    logStep('start');
+    const order = await Order.getRepository()
+      .createQueryBuilder('order')
+      .leftJoinAndSelect('order.user', 'user')
+      .leftJoinAndSelect('order.items', 'items')
+      .leftJoinAndSelect('items.product', 'product')
+      .leftJoinAndSelect('items.variant', 'variant')
+      .leftJoinAndSelect('order.appliedCoupon', 'appliedCoupon')
+      .where('order.id = :id', { id: orderId })
+      .select([
+        // order core fields
+        'order.id',
+        'order.createdAt',
+        'order.status',
+        'order.subtotal',
+        'order.shippingCost',
+        'order.discountAmount',
+        'order.couponCode',
+        'order.total',
+        'order.paymentIntentId',
+        'order.paymentOrder',
+        'order.notes',
+        'order.adminNotes',
+        'order.shippingAddress',
+        // user minimal fields
+        'user.id',
+        'user.name',
+        'user.email',
+        // items minimal fields
+        'items.id',
+        'items.quantity',
+        'items.price',
+        'items.total',
+        // product minimal fields
+        'product.id',
+        'product.name',
+        // variant minimal fields
+        'variant.id',
+        'variant.name',
+        'variant.sku',
+        // coupon id if needed
+        'appliedCoupon.id',
+      ])
+      .getOne();
+
+    logStep('order-fetched');
 
     if (!order) {
       throw new NotFoundException('Order not found');
@@ -57,6 +102,7 @@ export class OrdersService {
     } else if (order.paymentIntentId && order.paymentIntentId.startsWith('cs_')) {
       paymentMethod = 'Credit Card';
       try {
+        logStep('stripe-lookup-start');
         const stripeClient = this.paymentGatewayService['stripe'];
         const invoiceUrlPromise = (async () => {
           const session = await stripeClient.checkout.sessions.retrieve(order.paymentIntentId);
@@ -71,10 +117,12 @@ export class OrdersService {
           invoiceUrlPromise,
           new Promise<string | null>((resolve) => setTimeout(() => resolve(null), 1500)),
         ]);
+        logStep('stripe-lookup-done', { stripeInvoiceUrlPresent: !!stripeInvoiceUrl });
       } catch (error) {
-        console.error('Error retrieving Stripe invoice:', error);
+        console.error('[OrderPDF]', { orderId, event: 'stripe-error', error });
       }
     }
+    logStep('payment-details-ready', { paymentMethod });
 
     // Initialize PDF with modern settings (with defensive error handling)
     const stream = new PassThrough();
@@ -84,10 +132,22 @@ export class OrdersService {
       autoFirstPage: true,
     });
     doc.on('error', (err) => {
-      try { stream.destroy(err); } catch {}
+      try {
+        console.error('[OrderPDF]', { orderId, event: 'pdfkit-error', error: err });
+        stream.destroy(err);
+      } catch {}
     });
-    stream.on('error', () => {});
+    stream.on('error', (err) => {
+      try { console.error('[OrderPDF]', { orderId, event: 'stream-error', error: err }); } catch {}
+    });
+    stream.on('close', () => {
+      try { console.log('[OrderPDF]', { orderId, event: 'stream-close' }); } catch {}
+    });
+    stream.on('finish', () => {
+      try { console.log('[OrderPDF]', { orderId, event: 'stream-finish' }); } catch {}
+    });
     doc.pipe(stream);
+    logStep('pdf-init');
 
     // Helper function for text wrapping
     const wrapText = (text: string, maxWidth: number, fontSize: number = 10) => {
@@ -153,6 +213,7 @@ export class OrdersService {
 
     doc.y = 140;
     doc.fillColor('black');
+    logStep('header-rendered');
 
     // Order Information Cards
     const cardY = doc.y;
@@ -202,6 +263,7 @@ export class OrdersService {
       .text(order.user.email, 55 + cardWidth + cardSpacing, cardY + 80, { width: cardWidth - 30, ellipsis: true });
 
     doc.y = cardY + cardHeight + 30;
+    logStep('cards-rendered');
 
     // Shipping Address Section
     if (order.shippingAddress) {
@@ -230,6 +292,7 @@ export class OrdersService {
       
       doc.y = addressY + 10;
     }
+    logStep('shipping-rendered');
 
     // Modern Items Table
     checkPageBreak(200);
@@ -265,6 +328,7 @@ export class OrdersService {
     let currentRowY = tableStartY + 40;
 
     // Table Rows with proper text wrapping
+    console.log('[OrderPDF]', { orderId, event: 'items-start', count: order.items.length });
     order.items.forEach((item, index) => {
       const pageBreakOccurred = checkPageBreak(rowHeight + 20);
       
@@ -336,6 +400,7 @@ export class OrdersService {
     });
 
     doc.y = currentRowY + 30;
+    logStep('items-rendered');
 
     // Modern Totals Section
     checkPageBreak(150);
@@ -409,6 +474,7 @@ export class OrdersService {
       });
 
     doc.y = totalsY + totalsHeight + 30;
+    logStep('totals-rendered');
 
     // Payment Information
     checkPageBreak(100);
@@ -421,6 +487,7 @@ export class OrdersService {
       .font('Helvetica')
       .fillColor('#475569')
       .text(`Payment Method: ${paymentMethod}`, 40, doc.y + 25);
+    logStep('payment-info-rendered');
     
     
     // Purchase Order if available
@@ -443,7 +510,7 @@ export class OrdersService {
         .font('Helvetica')
         .fillColor('#475569');
       
-      let notesY = doc.y + 25;
+      let notesY = doc.y + 15;
       if (order.notes) {
         doc.text(`Customer Notes: ${order.notes}`, 40, notesY, { 
           width: 515, 
@@ -463,6 +530,7 @@ export class OrdersService {
       
       doc.y = notesY;
     }
+    logStep('notes-rendered');
 
     // Stripe invoice link if available
     if (stripeInvoiceUrl) {
@@ -476,6 +544,7 @@ export class OrdersService {
       
       doc.y += 15;
     }
+    logStep('stripe-link-rendered');
 
     // Footer
     const footerY = doc.y;
@@ -497,9 +566,10 @@ export class OrdersService {
     doc.on('end', () => {
       try {
         const duration = Date.now() - startTime;
-        console.log(`generateOrderPdf(${orderId}) completed in ${duration} ms`);
+        console.log('[OrderPDF]', { orderId, event: 'doc-end', totalMs: duration });
       } catch {}
     });
+    logStep('doc-end-call');
     doc.end();
 
     // Return a stream to avoid buffering entire PDF in memory

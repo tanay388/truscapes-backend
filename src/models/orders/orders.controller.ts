@@ -97,16 +97,27 @@ export class OrdersController {
     @Param('id', ParseIntPipe) id: number,
     @Res({ passthrough: true }) res: Response,
   ) {
+    try { console.log('[OrderPDF]', { orderId: id, event: 'controller-start' }); } catch {}
     const { stream, filename } = await this.ordersService.generateOrderPdf(id);
     // Ensure cleanup if client disconnects mid-stream
     res.on('close', () => {
-      try { stream.destroy(); } catch {}
+      try {
+        console.log('[OrderPDF]', { orderId: id, event: 'response-close' });
+        stream.destroy();
+      } catch {}
+    });
+    res.on('finish', () => {
+      try { console.log('[OrderPDF]', { orderId: id, event: 'response-finish' }); } catch {}
+    });
+    res.on('error', (err) => {
+      try { console.error('[OrderPDF]', { orderId: id, event: 'response-error', error: err }); } catch {}
     });
     res.set({
       'Content-Type': 'application/pdf',
       'Content-Disposition': `attachment; filename=${filename}`,
       'Cache-Control': 'no-store',
     });
+    try { console.log('[OrderPDF]', { orderId: id, event: 'controller-return' }); } catch {}
     return new StreamableFile(stream);
   }
 
