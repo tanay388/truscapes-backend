@@ -59,40 +59,6 @@ export class OrdersService {
       .leftJoinAndSelect('items.variant', 'variant')
       .leftJoinAndSelect('order.appliedCoupon', 'appliedCoupon')
       .where('order.id = :id', { id: orderId })
-      .select([
-        // order core fields
-        'order.id',
-        'order.createdAt',
-        'order.status',
-        'order.subtotal',
-        'order.shippingCost',
-        'order.discountAmount',
-        'order.couponCode',
-        'order.total',
-        'order.paymentIntentId',
-        'order.paymentOrder',
-        'order.notes',
-        'order.adminNotes',
-        'order.shippingAddress',
-        // user minimal fields
-        'user.id',
-        'user.name',
-        'user.email',
-        // items minimal fields
-        'items.id',
-        'items.quantity',
-        'items.price',
-        'items.total',
-        // product minimal fields
-        'product.id',
-        'product.name',
-        // variant minimal fields
-        'variant.id',
-        'variant.name',
-        'variant.sku',
-        // coupon id if needed
-        'appliedCoupon.id',
-      ])
       .getOne();
 
     logStep('order-fetched');
@@ -107,28 +73,9 @@ export class OrdersService {
     
     if (order.paymentIntentId === 'wallet') {
       paymentMethod = 'Wallet';
-    } else if (order.paymentIntentId && order.paymentIntentId.startsWith('cs_')) {
-      paymentMethod = 'Credit Card';
-      try {
-        logStep('stripe-lookup-start');
-        const stripeClient = this.paymentGatewayService['stripe'];
-        const invoiceUrlPromise = (async () => {
-          const session = await stripeClient.checkout.sessions.retrieve(order.paymentIntentId);
-          if (session.invoice) {
-            const invoice = await stripeClient.invoices.retrieve(session.invoice as string);
-            return invoice.hosted_invoice_url || null;
-          }
-          return null;
-        })();
-        // Avoid long waits on Stripe by timing out quickly
-        stripeInvoiceUrl = await Promise.race([
-          invoiceUrlPromise,
-          new Promise<string | null>((resolve) => setTimeout(() => resolve(null), 1500)),
-        ]);
-        logStep('stripe-lookup-done', { stripeInvoiceUrlPresent: !!stripeInvoiceUrl });
-      } catch (error) {
-        console.error('[OrderPDF]', { orderId, event: 'stripe-error', error });
-      }
+    } else if (order.paymentIntentId) {
+      paymentMethod = order.cardDetail || 'Credit Card';
+      stripeInvoiceUrl = order.receiptUrl;
     }
     logStep('payment-details-ready', { paymentMethod });
 
