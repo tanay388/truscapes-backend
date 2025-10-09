@@ -39,7 +39,7 @@ export class OrdersService {
       const total = now - startTime;
       lastMark = now;
       try {
-        console.log('[OrderPDF]', { orderId, event, deltaMs: delta, totalMs: total, ...extra });
+        //console.log('[OrderPDF]', { orderId, event, deltaMs: delta, totalMs: total, ...extra });
       } catch {}
     };
     logStep('start');
