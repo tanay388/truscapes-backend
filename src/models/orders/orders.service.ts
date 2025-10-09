@@ -1026,15 +1026,33 @@ export class OrdersService {
       .getOne();
 
       if(order.paymentIntentId && order.paymentIntentId.startsWith('cs_')){
-    const pi = await this.stripe.checkout.sessions.retrieve(order.paymentIntentId, {
-      expand: [
-        'payment_intent',
-        'invoice' // sometimes useful
-      ]
-    });}
+        try{
+        const cs = await this.stripe.checkout.sessions.retrieve(order.paymentIntentId, {
+          expand: [
+            'payment_intent',
+            'payment_intent.latest_charge',
+            'invoice' // sometimes useful
+          ]
+        });
+        
+        order.checkoutSessionId = cs.id;
+        order.paymentIntentId = (cs.payment_intent as Stripe.PaymentIntent).id;
+        const charge = (
+          (cs.payment_intent as Stripe.PaymentIntent).latest_charge as Stripe.Charge
+        );
+        const card = (
+              charge.payment_method_details as any
+          ).card as Stripe.Card;
 
-    // order.paymentIntentId = pi.payment_intent;
+        order.cardDetail = card.brand.toUpperCase() + ' - ' + card.last4;
 
+        order.receiptUrl = charge.receipt_url;
+
+        await order.save();
+        } catch (error) {
+          console.log(error);
+        }
+      }
 
     if (!order) {
       throw new NotFoundException('Order not found');

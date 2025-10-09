@@ -4,6 +4,7 @@ import { User } from 'src/models/user/entities/user.entity';
 import { Coupon } from 'src/models/coupons/entities/coupon.entity';
 import { Entity, Column, ManyToOne, OneToMany, JoinColumn } from 'typeorm';
 import { OrderItem } from './order-item.entity';
+import { PaymentMethod } from 'src/models/transactions/entities/transaction.entity';
 
 export enum OrderStatus {
   PENDING = 'PENDING',
@@ -81,6 +82,17 @@ export class Order extends BaseClassEntity {
 
   @Column({ nullable: true })
   paymentIntentId: string;
+
+  @Column({ nullable: true })
+  checkoutSessionId: string;
+
+  @Column({
+    nullable: true
+  })
+  cardDetail: string;
+
+  @Column({nullable:true})
+  receiptUrl: string;
 
   @Column({ nullable: true })
   trackingNumber: string;
