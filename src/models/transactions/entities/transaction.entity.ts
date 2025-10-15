@@ -24,6 +24,7 @@ export enum PaymentMethod {
 export class Transaction extends BaseClassEntity {
   @ManyToOne(() => User, (user) => user.transactions, {
     onDelete: 'CASCADE',
+    onUpdate: 'CASCADE',
   })
   user: User;
 

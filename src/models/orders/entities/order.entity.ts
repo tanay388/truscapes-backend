@@ -27,7 +27,7 @@ export enum PaymentStatus {
 
 @Entity('orders')
 export class Order extends BaseClassEntity {
-  @ManyToOne(() => User, { eager: true })
+  @ManyToOne(() => User, { eager: true, onDelete: 'CASCADE', onUpdate: 'CASCADE' })
   @JoinColumn()
   user: User;
 

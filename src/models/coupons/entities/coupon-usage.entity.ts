@@ -23,11 +23,11 @@ export class CouponUsage extends BaseEntity {
   @JoinColumn()
   coupon: Coupon;
 
-  @ManyToOne(() => User, { eager: true })
+  @ManyToOne(() => User, { eager: true, onDelete: 'CASCADE', onUpdate: 'CASCADE' })
   @JoinColumn()
   user: User;
 
-  @ManyToOne(() => Order, { nullable: true })
+  @ManyToOne(() => Order, { nullable: true, onDelete: 'CASCADE', onUpdate: 'CASCADE' })
   @JoinColumn()
   order: Order;
 

@@ -116,11 +116,13 @@ export class User extends BaseEntity {
   @OneToOne(() => Wallet, (wallet) => wallet.user, {
     cascade: true,
     eager: true,
+    onDelete: 'CASCADE',
+    onUpdate: 'CASCADE',
   })
   @JoinColumn()
   wallet: Wallet;
 
-  @OneToMany(() => Transaction, (t) => t.user, { cascade: true, eager: true })
+  @OneToMany(() => Transaction, (t) => t.user, { cascade: true, eager: true, onDelete: 'CASCADE', onUpdate: 'CASCADE' })
   transactions: Transaction[];
 
   toReturnJson() {
