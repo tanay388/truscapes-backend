@@ -147,6 +147,7 @@ export class ProductsService {
       index: updateProductDto.index,
       state: finalState,
       caseSize: updateProductDto.caseSize,
+      allowCaseOrder: updateProductDto.allowCaseOrder,
       category: { id: updateProductDto.categoryId },
     });
 
