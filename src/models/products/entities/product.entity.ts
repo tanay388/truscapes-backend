@@ -46,6 +46,9 @@ export class Product extends BaseClassEntity {
   @Column({ type: 'integer', default: 0 })
   index: number;
 
+  @Column({type: 'boolean', default: true})
+  allowCaseOrder: boolean;
+
   @Column({type: 'integer', default: 12})
   caseSize: number;
 

@@ -681,7 +681,7 @@ export class OrdersService {
       const casePricePerQuantity = price * 0.95;
       const caseSize = parseInt(product.caseSize.toString());
 
-      if(caseSize) {
+      if(caseSize && product.allowCaseOrder) {
         if(parseInt(item.quantity.toString())%caseSize === 0) {
           price = casePricePerQuantity ;
         }
