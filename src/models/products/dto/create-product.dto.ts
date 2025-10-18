@@ -114,4 +114,10 @@ export class CreateProductDto {
   @IsOptional()
   @Transform(({ value }) => Number(value))
   caseSize?: number;
+
+  @ApiPropertyOptional()
+  @IsBoolean()
+  @IsOptional()
+  @Transform(({value}) => value === 'true' || value === 'True')
+  allowCaseOrder?:boolean
 }
