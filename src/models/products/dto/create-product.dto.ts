@@ -118,6 +118,5 @@ export class CreateProductDto {
   @ApiPropertyOptional()
   @IsBoolean()
   @IsOptional()
-  @Transform(({value}) => value === 'true' || value === 'True')
   allowCaseOrder?:boolean
 }
