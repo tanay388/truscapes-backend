@@ -91,7 +91,7 @@ export class ProductsService {
           state: state ? state : ProductStatus.ACTIVE,
         },
         {
-          sku: ILike(`%${q}%`),
+          description: ILike(`%${q}%`),
           ...(categoryId && { category: { id: categoryId } }),
           state: state ? state : ProductStatus.ACTIVE,
         }
