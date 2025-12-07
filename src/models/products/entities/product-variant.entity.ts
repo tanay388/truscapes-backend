@@ -13,6 +13,9 @@ export class ProductVariant extends BaseClassEntity {
   @Column('simple-array')
   images: string[];
 
+  @Column({ type: 'boolean', default: true })
+  stockAvailable: boolean;
+
   @Column({
     type: 'decimal',
     precision: 10,

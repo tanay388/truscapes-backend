@@ -6,6 +6,8 @@ import {
   IsArray,
   IsNumber,
   IsUUID,
+  IsBoolean,
+  IsOptional,
 } from 'class-validator';
 
 export class CreateProductVariantDto {
@@ -35,6 +37,15 @@ export class CreateProductVariantDto {
   @IsArray()
   @IsNotEmpty()
   images: string[];
+
+  @ApiProperty({
+    description: 'Indicates if the variant is in stock',
+    example: true,
+    default: true,
+  })
+  @IsBoolean()
+  @IsOptional()
+  stockAvailable?: boolean;
 
   @ApiProperty({
     description: 'Dealer price for the product variant',
