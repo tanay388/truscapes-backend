@@ -928,6 +928,30 @@ export class OrdersService {
         query.andWhere('order.createdAt <= :endDate', { endDate: filter.endDate });
       }
 
+      // Flexible search across order/user/product fields
+      if (filter?.q && filter.q.trim().length > 0) {
+        const term = `%${filter.q.trim()}%`;
+        const numericId = Number(filter.q);
+        const hasNumericId = Number.isFinite(numericId);
+        const whereParts = [
+          'LOWER(user.name) LIKE LOWER(:term)',
+          'LOWER(user.email) LIKE LOWER(:term)',
+          'user.phone LIKE :term',
+          'order.paymentOrder LIKE :term',
+          'order.trackingNumber LIKE :term',
+          'product.name LIKE :term',
+          'variant.name LIKE :term',
+        ];
+        // Add ID equality if q is numeric
+        if (hasNumericId) {
+          whereParts.push('order.id = :id');
+        }
+        query.andWhere(`(${whereParts.join(' OR ')})`, {
+          term,
+          ...(hasNumericId ? { id: numericId } : {}),
+        });
+      }
+
       // Add pagination and ordering
       query
         .orderBy('order.createdAt', 'DESC')

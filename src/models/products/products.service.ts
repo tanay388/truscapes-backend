@@ -7,7 +7,6 @@ import { ILike } from 'typeorm';
 import { CreateProductVariantDto } from './dto/create-product-variant.dto';
 import { ProductVariant } from './entities/product-variant.entity';
 import { UpdateProductVariantDto } from './dto/update-product-variant.dto';
-import { error } from 'console';
 
 @Injectable()
 export class ProductsService {
