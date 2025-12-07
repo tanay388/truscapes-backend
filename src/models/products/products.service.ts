@@ -76,11 +76,12 @@ export class ProductsService {
   }
 
   async findAll(search: ProductSearchDto) {
-    const { q, categoryId, take, skip, state } = search;
+    const { q, categoryId, take, skip, state, includeOutOfStock } = search;
 
     let whereConditions: any = {
       ...(categoryId && { category: { id: categoryId } }),
       state: state ? state : ProductStatus.ACTIVE,
+      ...(includeOutOfStock ? {} : { stockAvailable: true }),
     };
 
     if (q) {
@@ -89,11 +90,13 @@ export class ProductsService {
           name: ILike(`%${q}%`),
           ...(categoryId && { category: { id: categoryId } }),
           state: state ? state : ProductStatus.ACTIVE,
+          ...(includeOutOfStock ? {} : { stockAvailable: true }),
         },
         {
           description: ILike(`%${q}%`),
           ...(categoryId && { category: { id: categoryId } }),
           state: state ? state : ProductStatus.ACTIVE,
+          ...(includeOutOfStock ? {} : { stockAvailable: true }),
         }
       ];
     }

@@ -1,5 +1,5 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsEnum, IsNumber, IsOptional, IsString } from 'class-validator';
+import { ApiPropertyOptional } from '@nestjs/swagger';
+import { IsBoolean, IsEnum, IsNumber, IsOptional, IsString } from 'class-validator';
 import { Pagination } from 'src/common/dtos/pagination.dto';
 import { ProductStatus } from '../entities/product.entity';
 import { Transform } from 'class-transformer';
@@ -32,4 +32,14 @@ export class ProductSearchDto extends Pagination {
   @IsEnum(ProductStatus)
   @IsOptional()
   state?: ProductStatus;
+
+  @ApiPropertyOptional({
+    description: 'Include out-of-stock products in results',
+    example: false,
+    required: false,
+  })
+  @IsBoolean()
+  @IsOptional()
+  @Transform(({ value }) => value === true || value === 'true')
+  includeOutOfStock?: boolean;
 }
