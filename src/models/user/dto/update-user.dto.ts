@@ -124,4 +124,8 @@ export class UpdateUserDto {
   @IsOptional()
   ein?: string;
 
+  @ApiPropertyOptional({ description: 'User\'s allow credit', example: true })
+  @IsBoolean()
+  @IsOptional()
+  allowCredit?: boolean;
 }

@@ -68,6 +68,9 @@ export class User extends BaseEntity {
   @Column({ nullable: true })
   approved: boolean;
 
+  @Column({ nullable: false, default: false })
+  allowCredit: boolean;
+
   @Column({nullable: true})
   street: string;
 
