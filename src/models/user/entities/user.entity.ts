@@ -53,7 +53,7 @@ export class User extends BaseEntity {
   @Column({ nullable: true })
   name: string;
 
-  @Column({ nullable: true})
+  @Column({ nullable: true })
   lastName: string;
 
   @Column({ nullable: true })
@@ -71,7 +71,7 @@ export class User extends BaseEntity {
   @Column({ nullable: false, default: false })
   allowCredit: boolean;
 
-  @Column({nullable: true})
+  @Column({ nullable: true })
   street: string;
 
   @Column({ nullable: true })
@@ -80,10 +80,10 @@ export class User extends BaseEntity {
   @Column({ nullable: true })
   city: string;
 
-  @Column({nullable: true})
+  @Column({ nullable: true })
   zip: string;
 
-  @Column({nullable: true})
+  @Column({ nullable: true })
   additionalDetails: string;
 
   @Column({ nullable: true })
@@ -125,13 +125,27 @@ export class User extends BaseEntity {
   @JoinColumn()
   wallet: Wallet;
 
-  @OneToMany(() => Transaction, (t) => t.user, { cascade: true, eager: true, onDelete: 'CASCADE', onUpdate: 'CASCADE' })
+  @OneToMany(() => Transaction, (t) => t.user, {
+    cascade: true,
+    eager: true,
+    onDelete: 'CASCADE',
+    onUpdate: 'CASCADE',
+  })
   transactions: Transaction[];
 
   toReturnJson() {
-    const { id, name, email, phone, photo, role, birthDate, companyAddress } = this;
+    const { id, name, email, phone, photo, role, birthDate, companyAddress } =
+      this;
 
-    return { id, name: name + '\'s ' + companyAddress, email, phone, photo, role, birthDate };
+    return {
+      id,
+      name: name + "'s " + companyAddress,
+      email,
+      phone,
+      photo,
+      role,
+      birthDate,
+    };
   }
 
   withJWT(jwtService: JwtService) {
@@ -159,11 +173,11 @@ export class User extends BaseEntity {
 
   @Column({ nullable: false, default: 'N/A' })
   salesRep: string;
-  
-  @Column({nullable: true})
+
+  @Column({ nullable: true })
   ein: string;
 
-  @Column({nullable: true})
+  @Column({ nullable: true })
   taxExemptFormLink: string;
 
   @Column({ type: 'boolean', default: false })

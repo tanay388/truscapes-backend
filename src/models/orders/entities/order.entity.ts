@@ -15,19 +15,23 @@ export enum OrderStatus {
   DELIVERED = 'DELIVERED',
   CANCELLED = 'CANCELLED',
   REFUNDED = 'REFUNDED',
-  FAILED = 'FAILED'
+  FAILED = 'FAILED',
 }
 
 export enum PaymentStatus {
   PENDING = 'PENDING',
   COMPLETED = 'COMPLETED',
   FAILED = 'FAILED',
-  REFUNDED = 'REFUNDED'
+  REFUNDED = 'REFUNDED',
 }
 
 @Entity('orders')
 export class Order extends BaseClassEntity {
-  @ManyToOne(() => User, { eager: true, onDelete: 'CASCADE', onUpdate: 'CASCADE' })
+  @ManyToOne(() => User, {
+    eager: true,
+    onDelete: 'CASCADE',
+    onUpdate: 'CASCADE',
+  })
   @JoinColumn()
   user: User;
 
@@ -87,19 +91,19 @@ export class Order extends BaseClassEntity {
   checkoutSessionId: string;
 
   @Column({
-    nullable: true
+    nullable: true,
   })
   cardDetail: string;
 
-  @Column({nullable:true})
+  @Column({ nullable: true })
   receiptUrl: string;
 
   @Column({ nullable: true })
   trackingNumber: string;
 
   @Column({ type: 'text', nullable: true })
-  notes: string;  
-  
+  notes: string;
+
   @Column({ type: 'text', nullable: true })
   paymentOrder: string;
 

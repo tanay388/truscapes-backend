@@ -6,7 +6,11 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
-import { Coupon, CouponType, CouponEligibilityType } from './entities/coupon.entity';
+import {
+  Coupon,
+  CouponType,
+  CouponEligibilityType,
+} from './entities/coupon.entity';
 import { CouponUsage } from './entities/coupon-usage.entity';
 import { User, UserRole } from '../user/entities/user.entity';
 import { CreateCouponDto } from './dtos/create-coupon.dto';
@@ -41,7 +45,8 @@ export class CouponsService {
     // Validate eligible users if specified
     let eligibleUsers: User[] = [];
     if (
-      createCouponDto.eligibilityType === CouponEligibilityType.SPECIFIC_USERS &&
+      createCouponDto.eligibilityType ===
+        CouponEligibilityType.SPECIFIC_USERS &&
       createCouponDto.eligibleUserIds
     ) {
       eligibleUsers = await this.userRepository.find({
@@ -73,7 +78,7 @@ export class CouponsService {
       relations: ['eligibleUsers'],
       order: { createdAt: 'DESC' },
       take: pagination.take,
-      skip: pagination.skip
+      skip: pagination.skip,
     });
   }
 
@@ -110,7 +115,8 @@ export class CouponsService {
     // Handle eligible users update
     let eligibleUsers: User[] = [];
     if (
-      updateCouponDto.eligibilityType === CouponEligibilityType.SPECIFIC_USERS &&
+      updateCouponDto.eligibilityType ===
+        CouponEligibilityType.SPECIFIC_USERS &&
       updateCouponDto.eligibleUserIds
     ) {
       eligibleUsers = await this.userRepository.find({
@@ -327,7 +333,10 @@ export class CouponsService {
     }
 
     // Apply maximum discount limit
-    if (coupon.maximumDiscountAmount && discountAmount > coupon.maximumDiscountAmount) {
+    if (
+      coupon.maximumDiscountAmount &&
+      discountAmount > coupon.maximumDiscountAmount
+    ) {
       discountAmount = coupon.maximumDiscountAmount;
     }
 
@@ -352,9 +361,11 @@ export class CouponsService {
     orderAmount: number,
   ): Promise<CouponUsage> {
     // Get the entities first
-    const coupon = await this.couponRepository.findOne({ where: { id: couponId } });
+    const coupon = await this.couponRepository.findOne({
+      where: { id: couponId },
+    });
     const user = await this.userRepository.findOne({ where: { id: userId } });
-    
+
     // Create usage record
     const usage = this.couponUsageRepository.create({
       coupon,
@@ -366,11 +377,7 @@ export class CouponsService {
     await this.couponUsageRepository.save(usage);
 
     // Update coupon usage count
-    await this.couponRepository.increment(
-      { id: couponId },
-      'usageCount',
-      1,
-    );
+    await this.couponRepository.increment({ id: couponId }, 'usageCount', 1);
 
     return usage;
   }

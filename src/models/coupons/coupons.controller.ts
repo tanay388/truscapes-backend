@@ -39,7 +39,7 @@ export class CouponsController {
 
   @Get('admin')
   @AdminOnly()
-  async getAllCoupons(@Query() pagination : Pagination) {
+  async getAllCoupons(@Query() pagination: Pagination) {
     return await this.couponsService.getAllCoupons(pagination);
   }
 

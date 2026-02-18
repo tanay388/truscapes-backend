@@ -57,5 +57,4 @@ export class GalleryController {
   remove(@Param('id') id: string) {
     return this.galleryService.remove(+id);
   }
-
 }

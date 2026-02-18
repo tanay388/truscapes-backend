@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { Product, ProductStatus } from './entities/product.entity';
@@ -62,13 +66,13 @@ export class ProductsService {
 
     const product = await Product.findOneBy({ id: variant.productId });
 
-    if(product.variants.length === 1){
+    if (product.variants.length === 1) {
       await Product.update(
-        {id: product.id},
+        { id: product.id },
         {
-          state: ProductStatus.DRAFT
-        }
-      )
+          state: ProductStatus.DRAFT,
+        },
+      );
     }
     await variant.softRemove();
     return product;
@@ -96,7 +100,7 @@ export class ProductsService {
           ...(categoryId && { category: { id: categoryId } }),
           state: state ? state : ProductStatus.ACTIVE,
           ...(includeOutOfStock ? {} : { stockAvailable: true }),
-        }
+        },
       ];
     }
 
@@ -114,29 +118,34 @@ export class ProductsService {
 
   async update(id: number, updateProductDto: UpdateProductDto) {
     updateProductDto.categoryId = Number(updateProductDto.categoryId);
-    
-    const product = await Product.findOne({ 
-      where: { id }, 
-      relations: ['variants'] 
+
+    const product = await Product.findOne({
+      where: { id },
+      relations: ['variants'],
     });
-    
+
     if (!product) {
       throw new NotFoundException(`Product with ID ${id} not found`);
     }
-    
+
     // Check if trying to set status to ACTIVE without variants
     if (updateProductDto.state === ProductStatus.ACTIVE) {
       if (!product.variants || product.variants.length === 0) {
-        throw new BadRequestException('Cannot set product status to ACTIVE when no variants are available');
+        throw new BadRequestException(
+          'Cannot set product status to ACTIVE when no variants are available',
+        );
       }
     }
-    
+
     // If images are being updated and become empty, force status to DRAFT
     let finalState = updateProductDto.state;
-    if (updateProductDto.images !== undefined && (!updateProductDto.images || updateProductDto.images.length === 0)) {
+    if (
+      updateProductDto.images !== undefined &&
+      (!updateProductDto.images || updateProductDto.images.length === 0)
+    ) {
       finalState = ProductStatus.DRAFT;
     }
-    
+
     const updatedProduct = await Product.update(id, {
       name: updateProductDto.name,
       description: updateProductDto.description,

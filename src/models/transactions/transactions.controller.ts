@@ -26,7 +26,7 @@ export class TransactionsController {
   constructor(private readonly transactionsService: TransactionsService) {}
 
   @Get('my-transactions')
-  @ApiOperation({ summary: 'Get current user\'s transactions' })
+  @ApiOperation({ summary: "Get current user's transactions" })
   getMyTransactions(
     @FUser() user: FirebaseUser,
     @Query() pagination: Pagination,
@@ -36,7 +36,9 @@ export class TransactionsController {
 
   @Get('user/:userId')
   @AdminOnly()
-  @ApiOperation({ summary: 'Get transactions for a specific user (Admin only)' })
+  @ApiOperation({
+    summary: 'Get transactions for a specific user (Admin only)',
+  })
   getUserTransactions(
     @Param('userId') userId: string,
     @Query() pagination: Pagination,

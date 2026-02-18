@@ -56,7 +56,7 @@ import { HttpErrorFilter } from './common/utils/error-log';
     CouponsModule,
   ],
   controllers: [AppController],
-    providers: [
+  providers: [
     AppService,
     {
       provide: APP_FILTER,

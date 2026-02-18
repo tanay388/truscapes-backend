@@ -1,5 +1,12 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsEnum, IsOptional, IsNumber, IsDate, Min, IsString } from 'class-validator';
+import {
+  IsEnum,
+  IsOptional,
+  IsNumber,
+  IsDate,
+  Min,
+  IsString,
+} from 'class-validator';
 import { Transform } from 'class-transformer';
 import { Type } from 'class-transformer';
 import { OrderStatus } from '../entities/order.entity';
@@ -36,7 +43,9 @@ export class OrderFilterDto {
   @Type(() => Date)
   endDate?: Date;
 
-  @ApiPropertyOptional({ description: 'Search term across order/user/product fields' })
+  @ApiPropertyOptional({
+    description: 'Search term across order/user/product fields',
+  })
   @IsString()
   @IsOptional()
   @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))

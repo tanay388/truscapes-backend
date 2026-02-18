@@ -1,5 +1,12 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsEnum, IsNumber, IsOptional, IsString, Min, ValidateIf } from 'class-validator';
+import {
+  IsEnum,
+  IsNumber,
+  IsOptional,
+  IsString,
+  Min,
+  ValidateIf,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 
 export enum PaymentGateway {
@@ -12,21 +19,21 @@ export enum PaymentGateway {
 export class CardInfo {
   @ApiProperty({
     description: 'Credit card number',
-    example: '4111111111111111'
+    example: '4111111111111111',
   })
   @IsString()
   cardNumber: string;
 
   @ApiProperty({
     description: 'Card expiration date (MMYY)',
-    example: '1225'
+    example: '1225',
   })
   @IsString()
   expirationDate: string;
 
   @ApiProperty({
     description: 'Card security code',
-    example: '123'
+    example: '123',
   })
   @IsString()
   cardCode: string;
@@ -35,8 +42,8 @@ export class CardInfo {
 export class RepayDuesDto {
   @ApiProperty({
     description: 'Amount to repay',
-    example: 100.00,
-    minimum: 0
+    example: 100.0,
+    minimum: 0,
   })
   @IsNumber()
   @Min(0)
@@ -46,33 +53,34 @@ export class RepayDuesDto {
   @ApiProperty({
     description: 'Payment gateway to use',
     enum: PaymentGateway,
-    example: PaymentGateway.STRIPE
+    example: PaymentGateway.STRIPE,
   })
   @IsEnum(PaymentGateway)
   gateway: PaymentGateway;
 
   @ApiProperty({
-    description: 'Payment token from the gateway (required for PayPal/Stripe confirmation)',
+    description:
+      'Payment token from the gateway (required for PayPal/Stripe confirmation)',
     example: 'tok_visa',
-    required: false
+    required: false,
   })
   @IsString()
   @IsOptional()
-  @ValidateIf(o => o.gateway !== PaymentGateway.AUTHORIZE_NET)
+  @ValidateIf((o) => o.gateway !== PaymentGateway.AUTHORIZE_NET)
   paymentToken?: string;
 
   @ApiProperty({
     description: 'Card information (required for Authorize.NET)',
     type: CardInfo,
-    required: false
+    required: false,
   })
-  @ValidateIf(o => o.gateway === PaymentGateway.AUTHORIZE_NET)
+  @ValidateIf((o) => o.gateway === PaymentGateway.AUTHORIZE_NET)
   cardInfo?: CardInfo;
 
   @ApiProperty({
     description: 'Description for the payment',
     example: 'Repaying credit dues',
-    required: false
+    required: false,
   })
   @IsString()
   @IsOptional()

@@ -20,7 +20,11 @@ import { FirebaseSecure } from './decorator/firebase.secure.decorator';
 import { FirebaseUser } from '../../providers/firebase/firebase.service';
 import { FUser } from './decorator/firebase.user.decorator';
 import { UpdateUserDto } from './dto/update-user.dto';
-import { FileFieldsInterceptor, FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
+import {
+  FileFieldsInterceptor,
+  FileInterceptor,
+  FilesInterceptor,
+} from '@nestjs/platform-express';
 import {
   ApiBearerAuth,
   ApiBody,
@@ -67,7 +71,10 @@ export class UserController {
   @Post('admin/reset-password')
   @AdminOnly()
   @ApiOperation({ summary: 'Reset user password (Admin only)' })
-  resetPasswordByAdmin(@Body() dto: ResetPasswordByAdminDto, @FUser() admin: FirebaseUser) {
+  resetPasswordByAdmin(
+    @Body() dto: ResetPasswordByAdminDto,
+    @FUser() admin: FirebaseUser,
+  ) {
     return this.userService.resetPasswordByAdmin(dto, admin.uid);
   }
 
@@ -116,11 +123,12 @@ export class UserController {
   @Post('admin/users/:id/toggle-local-dealer')
   @AdminOnly()
   @ApiOperation({ summary: 'Toggle local dealer status for user (Admin only)' })
-  toggleLocalDealerStatus(@Param('id') userId: string, @FUser() admin: FirebaseUser) {
+  toggleLocalDealerStatus(
+    @Param('id') userId: string,
+    @FUser() admin: FirebaseUser,
+  ) {
     return this.userService.toggleLocalDealerStatus(userId, admin.uid);
   }
-
-
 
   @Get(':id')
   getProfileById(@Param('id') userId: string) {
@@ -131,19 +139,26 @@ export class UserController {
   @ApiOperation({ summary: 'Update user profile' })
   @ApiConsumes('multipart/form-data')
   @UseInterceptors(
-    FileFieldsInterceptor(
-      [
-        {name: 'photo', maxCount: 1},
-        {name: 'resaleFile', maxCount: 1}
-      ]
-    )
+    FileFieldsInterceptor([
+      { name: 'photo', maxCount: 1 },
+      { name: 'resaleFile', maxCount: 1 },
+    ]),
   )
   async updateProfile(
     @FUser() user: FirebaseUser,
     @Body() dto: UpdateUserDto,
-    @UploadedFiles() files: {photo?: Express.Multer.File[], resaleFile?: Express.Multer.File[]},
+    @UploadedFiles()
+    files: {
+      photo?: Express.Multer.File[];
+      resaleFile?: Express.Multer.File[];
+    },
   ) {
-    return this.userService.updateProfile(user, dto, files.photo?.[0], files.resaleFile?.[0]);
+    return this.userService.updateProfile(
+      user,
+      dto,
+      files.photo?.[0],
+      files.resaleFile?.[0],
+    );
   }
 
   @Post('firebase-token')
@@ -160,29 +175,35 @@ export class UserController {
   @ApiOperation({ summary: 'Export users data as Excel file' })
   async exportUsersToExcel(@Res() res: Response) {
     const users = await this.userService.getUsers({ take: 1000, skip: 0 });
-    
+
     const workbook = XLSX.utils.book_new();
-    const worksheet = XLSX.utils.json_to_sheet(users.map(user => ({
-      ID: user.id,
-      Name: user.name,
-      Email: user.email,
-      Phone: user.phone,
-      Role: user.role,
-      Approved: user.approved ? 'Yes' : 'No',
-      Country: user.country,
-      City: user.city,
-      Company: user.company,
-      Company_Address: user.companyAddress,
-      Company_Website: user.companyWebsite,
-      Photo: user.photo,
-      Created: user.createdAt
-    })));
+    const worksheet = XLSX.utils.json_to_sheet(
+      users.map((user) => ({
+        ID: user.id,
+        Name: user.name,
+        Email: user.email,
+        Phone: user.phone,
+        Role: user.role,
+        Approved: user.approved ? 'Yes' : 'No',
+        Country: user.country,
+        City: user.city,
+        Company: user.company,
+        Company_Address: user.companyAddress,
+        Company_Website: user.companyWebsite,
+        Photo: user.photo,
+        Created: user.createdAt,
+      })),
+    );
 
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Users');
-    const excelBuffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+    const excelBuffer = XLSX.write(workbook, {
+      type: 'buffer',
+      bookType: 'xlsx',
+    });
 
     res.set({
-      'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'Content-Type':
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       'Content-Disposition': `attachment; filename=users_${Date.now().toString()}.xlsx`,
     });
 
@@ -200,5 +221,4 @@ export class UserController {
   deleteUser(@Param('id') userId: string, @FUser() admin: FirebaseUser) {
     return this.userService.deleteUser(userId, admin.uid);
   }
-
 }

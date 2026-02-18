@@ -88,46 +88,49 @@ export class UploaderService {
       .substring(0, 100); // Limit filename length
   }
 
-   /**
-    * Fixes existing URLs with special characters by properly encoding them
-    * Use this for files that were uploaded before the sanitization fix
-    */
-   fixExistingUrl(invalidUrl: string): string {
-     try {
-       const url = new URL(invalidUrl);
-       const bucketName = url.hostname.split('.')[0]; // Extract bucket name from hostname
-       const pathParts = url.pathname.split('/');
-       
-       // Reconstruct the path by encoding each part
-       const encodedPath = pathParts
-         .filter(part => part) // Remove empty parts
-         .map(part => encodeURIComponent(part))
-         .join('/');
-       
-       return `https://storage.googleapis.com/${bucketName}/${encodedPath}`;
-     } catch (error) {
-       console.error('Error fixing URL:', error);
-       return invalidUrl; // Return original if parsing fails
-     }
-   }
+  /**
+   * Fixes existing URLs with special characters by properly encoding them
+   * Use this for files that were uploaded before the sanitization fix
+   */
+  fixExistingUrl(invalidUrl: string): string {
+    try {
+      const url = new URL(invalidUrl);
+      const bucketName = url.hostname.split('.')[0]; // Extract bucket name from hostname
+      const pathParts = url.pathname.split('/');
 
-   /**
-    * Alternative method to access files using Firebase Storage's signed URL
-    * This bypasses URL encoding issues by generating a new access URL
-    */
-   async getSignedUrl(filePath: string, expiresInMinutes: number = 60): Promise<string> {
-     try {
-       const file = this.bucket.file(filePath);
-       const [signedUrl] = await file.getSignedUrl({
-         action: 'read',
-         expires: Date.now() + expiresInMinutes * 60 * 1000,
-       });
-       return signedUrl;
-     } catch (error) {
-       console.error('Error generating signed URL:', error);
-       throw error;
-     }
-   }
+      // Reconstruct the path by encoding each part
+      const encodedPath = pathParts
+        .filter((part) => part) // Remove empty parts
+        .map((part) => encodeURIComponent(part))
+        .join('/');
+
+      return `https://storage.googleapis.com/${bucketName}/${encodedPath}`;
+    } catch (error) {
+      console.error('Error fixing URL:', error);
+      return invalidUrl; // Return original if parsing fails
+    }
+  }
+
+  /**
+   * Alternative method to access files using Firebase Storage's signed URL
+   * This bypasses URL encoding issues by generating a new access URL
+   */
+  async getSignedUrl(
+    filePath: string,
+    expiresInMinutes: number = 60,
+  ): Promise<string> {
+    try {
+      const file = this.bucket.file(filePath);
+      const [signedUrl] = await file.getSignedUrl({
+        action: 'read',
+        expires: Date.now() + expiresInMinutes * 60 * 1000,
+      });
+      return signedUrl;
+    } catch (error) {
+      console.error('Error generating signed URL:', error);
+      throw error;
+    }
+  }
 
   async uploadFiles(
     files?: (UploadedMulterFileI | string)[],

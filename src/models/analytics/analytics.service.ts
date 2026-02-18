@@ -19,7 +19,7 @@ export class AnalyticsService {
 
     // Get pending orders
     const pendingOrders = await Order.count({
-      where: { status: OrderStatus.CONFIRMED }
+      where: { status: OrderStatus.CONFIRMED },
     });
 
     // Get total products
@@ -27,16 +27,20 @@ export class AnalyticsService {
 
     // Get active users
     const activeUsers = await User.count({
-      where: { approved: true }
+      where: { approved: true },
     });
 
     // Get today's revenue
     const todayOrders = await Order.find({
       where: {
         createdAt: Between(today, new Date()),
-      }
+      },
     });
-    const todayRevenue = todayOrders.reduce((sum, order) => parseFloat(sum.toString()) + parseFloat(order.total.toString()), 0);
+    const todayRevenue = todayOrders.reduce(
+      (sum, order) =>
+        parseFloat(sum.toString()) + parseFloat(order.total.toString()),
+      0,
+    );
 
     // Get orders summary for last 30 days
     const ordersSummary = await this.getOrdersSummary(thirtyDaysAgo, today);
@@ -51,38 +55,55 @@ export class AnalyticsService {
       activeUsers,
       todayRevenue,
       ordersSummary,
-      revenueTrends
+      revenueTrends,
     };
   }
 
-  private async getOrdersSummary(startDate: Date, endDate: Date): Promise<Array<{ date: string; count: number }>> {
-    const orders = await Order.find({
-      where: {
-        createdAt: Between(startDate, endDate)
-      },
-      select: ['createdAt']
-    });
-
-    return this.groupByDate(orders, 'count') as Array<{ date: string; count: number }>;
-  }
-
-  private async getRevenueTrends(startDate: Date, endDate: Date): Promise<Array<{ date: string; revenue: number }>> {
+  private async getOrdersSummary(
+    startDate: Date,
+    endDate: Date,
+  ): Promise<Array<{ date: string; count: number }>> {
     const orders = await Order.find({
       where: {
         createdAt: Between(startDate, endDate),
       },
-      select: ['createdAt', 'total']
+      select: ['createdAt'],
     });
 
-    return this.groupByDate(orders, 'revenue') as Array<{ date: string; revenue: number }>;
+    return this.groupByDate(orders, 'count') as Array<{
+      date: string;
+      count: number;
+    }>;
   }
 
-  private groupByDate(orders: Array<{ createdAt: Date; total?: number }>, type: 'count' | 'revenue'): Array<{ date: string; count: number }> | Array<{ date: string; revenue: number }> {
+  private async getRevenueTrends(
+    startDate: Date,
+    endDate: Date,
+  ): Promise<Array<{ date: string; revenue: number }>> {
+    const orders = await Order.find({
+      where: {
+        createdAt: Between(startDate, endDate),
+      },
+      select: ['createdAt', 'total'],
+    });
+
+    return this.groupByDate(orders, 'revenue') as Array<{
+      date: string;
+      revenue: number;
+    }>;
+  }
+
+  private groupByDate(
+    orders: Array<{ createdAt: Date; total?: number }>,
+    type: 'count' | 'revenue',
+  ):
+    | Array<{ date: string; count: number }>
+    | Array<{ date: string; revenue: number }> {
     // Generate all dates for the last 30 days
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const dates: string[] = [];
-    
+
     for (let i = 29; i >= 0; i--) {
       const date = new Date(today);
       date.setDate(date.getDate() - i);
@@ -98,15 +119,16 @@ export class AnalyticsService {
       if (type === 'count') {
         acc[date] += 1;
       } else {
-        acc[date] = parseFloat(acc[date].toString()) + parseFloat(order.total.toString());
+        acc[date] =
+          parseFloat(acc[date].toString()) + parseFloat(order.total.toString());
       }
       return acc;
     }, {});
 
     // Ensure all dates are present with at least 0 value
-    const result = dates.map(date => ({
+    const result = dates.map((date) => ({
       date,
-      [type === 'count' ? 'count' : 'revenue']: grouped[date] || 0
+      [type === 'count' ? 'count' : 'revenue']: grouped[date] || 0,
     }));
 
     return result as any;

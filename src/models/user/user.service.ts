@@ -1,7 +1,14 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { User, UserRole } from './entities/user.entity';
-import { FirebaseService, FirebaseUser } from '../../providers/firebase/firebase.service';
+import {
+  FirebaseService,
+  FirebaseUser,
+} from '../../providers/firebase/firebase.service';
 import { UploaderService } from '../../providers/uploader/uploader.service';
 import { NotificationService } from 'src/providers/notification/notification.service';
 import { Wallet } from '../wallet/entities/wallet.entity';
@@ -44,7 +51,7 @@ export class UserService {
         country: 'Deleted',
         photo: null,
         approved: false,
-        deletedAt: new Date()
+        deletedAt: new Date(),
       });
 
       return { message: 'User deleted successfully' };
@@ -70,18 +77,18 @@ export class UserService {
 
     return {
       ...user,
-      name: `${user.name}'s ${user.companyAddress}`
+      name: `${user.name}'s ${user.companyAddress}`,
     };
   }
 
   async getUsers(searchDto: SearchUserDto) {
     const query = searchDto.query ? `%${searchDto.query}%` : null;
     const whereConditions: any = {};
-    
+
     if (searchDto.role) {
       whereConditions.role = searchDto.role;
     }
-    
+
     if (searchDto.approved) {
       if (searchDto.approved === 'true') {
         whereConditions.approved = true;
@@ -89,12 +96,15 @@ export class UserService {
         whereConditions.approved = false;
       }
     }
-    
+
     const users = await User.find({
       where: query
         ? [
             { ...whereConditions, name: Like(query) },
-            { ...whereConditions, email: Like(query) }
+            { ...whereConditions, email: Like(query) },
+            { ...whereConditions, company: Like(query) },
+            { ...whereConditions, companyWebsite: Like(query) },
+            { ...whereConditions, companyAddress: Like(query) },
           ]
         : whereConditions,
       take: searchDto.take,
@@ -104,9 +114,9 @@ export class UserService {
       },
     });
 
-    return users.map(user => ({
+    return users.map((user) => ({
       ...user,
-      name: `${user.name}'s ${user.companyAddress}`
+      name: `${user.name}'s ${user.companyAddress}`,
     }));
   }
 
@@ -153,14 +163,14 @@ export class UserService {
         id: user.id,
         name: user.name,
         email: user.email,
-        isLocalDealer: user.isLocalDealer
-      }
+        isLocalDealer: user.isLocalDealer,
+      },
     };
   }
 
   async resetPasswordByAdmin(dto: ResetPasswordByAdminDto, adminId: string) {
     const { userId, newPassword } = dto;
-    
+
     // Check if user exists in database
     const user = await User.findOne({ where: { id: userId } });
     if (!user) {
@@ -170,14 +180,14 @@ export class UserService {
     try {
       // Update password using Firebase Admin SDK
       await this.firebaseService.auth.updateUser(userId, {
-        password: newPassword
+        password: newPassword,
       });
 
       // Send email notification to user about password reset
       await this.emailService.sendPasswordResetNotificationEmail(
         user.email,
         user.name || user.email,
-        newPassword
+        newPassword,
       );
 
       return {
@@ -185,17 +195,19 @@ export class UserService {
         user: {
           id: user.id,
           name: user.name,
-          email: user.email
-        }
+          email: user.email,
+        },
       };
     } catch (error) {
-      throw new BadRequestException(`Failed to reset password: ${error.message}`);
+      throw new BadRequestException(
+        `Failed to reset password: ${error.message}`,
+      );
     }
   }
 
   async forgotPassword(dto: ForgotPasswordDto) {
     const { email } = dto;
-    
+
     // Check if user exists in database
     const user = await User.findOne({ where: { email } });
     if (!user) {
@@ -204,20 +216,23 @@ export class UserService {
 
     try {
       // Generate password reset link using Firebase Admin SDK
-      const resetLink = await this.firebaseService.auth.generatePasswordResetLink(email);
+      const resetLink =
+        await this.firebaseService.auth.generatePasswordResetLink(email);
 
       // Send email with password reset link
       await this.emailService.sendPasswordResetLinkEmail(
         user.email,
         user.name || user.email,
-        resetLink
+        resetLink,
       );
 
       return {
-        message: 'Password reset link sent successfully to your email address'
+        message: 'Password reset link sent successfully to your email address',
       };
     } catch (error) {
-      throw new BadRequestException(`Failed to send password reset link: ${error.message}`);
+      throw new BadRequestException(
+        `Failed to send password reset link: ${error.message}`,
+      );
     }
   }
 
@@ -296,8 +311,11 @@ export class UserService {
 
     let taxExemptFormLink: string;
 
-    if(resaleFile) {
-      taxExemptFormLink = await this.uploader.uploadFile(resaleFile, 'users/' + uid + '/resale');
+    if (resaleFile) {
+      taxExemptFormLink = await this.uploader.uploadFile(
+        resaleFile,
+        'users/' + uid + '/resale',
+      );
     }
 
     console.log({
@@ -323,8 +341,8 @@ export class UserService {
       street,
       salesRep,
       ein,
-      taxExemptFormLink
-    })
+      taxExemptFormLink,
+    });
 
     await User.update(uid, {
       photo: path,
@@ -349,7 +367,7 @@ export class UserService {
       street,
       ein,
       salesRep,
-      taxExemptFormLink: taxExemptFormLink
+      taxExemptFormLink: taxExemptFormLink,
     });
 
     return this.getProfile(fUser);
@@ -370,16 +388,20 @@ export class UserService {
 
   async createUserByAdmin(dto: CreateUserByAdminDto, adminId: string) {
     // Check if user exists in our database
-    let existingUser = await User.findOne({ where: { email: dto.email } });
+    const existingUser = await User.findOne({ where: { email: dto.email } });
     if (existingUser) {
-      throw new BadRequestException('User with this email already exists in database');
+      throw new BadRequestException(
+        'User with this email already exists in database',
+      );
     }
 
     try {
       // Check if user exists in Firebase
       let firebaseUser;
       try {
-        firebaseUser = await this.firebaseService.auth.getUserByEmail(dto.email);
+        firebaseUser = await this.firebaseService.auth.getUserByEmail(
+          dto.email,
+        );
       } catch (error) {
         // User doesn't exist in Firebase, create new user
         firebaseUser = await this.firebaseService.auth.createUser({
@@ -414,7 +436,10 @@ export class UserService {
       });
 
       // Send welcome email with temporary password
-      await this.emailService.sendAccountApprovedEmail(user.email, user.name || user.email);
+      await this.emailService.sendAccountApprovedEmail(
+        user.email,
+        user.name || user.email,
+      );
 
       return user;
     } catch (error) {
@@ -422,7 +447,12 @@ export class UserService {
     }
   }
 
-  async updateUserByAdmin(userId: string, dto: UpdateUserDto, photo: Express.Multer.File, adminId: string) {
+  async updateUserByAdmin(
+    userId: string,
+    dto: UpdateUserDto,
+    photo: Express.Multer.File,
+    adminId: string,
+  ) {
     const user = await User.findOne({ where: { id: userId } });
     if (!user) {
       throw new NotFoundException('User not found');

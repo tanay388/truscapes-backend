@@ -118,5 +118,5 @@ export class CreateProductDto {
   @ApiPropertyOptional()
   @IsBoolean()
   @IsOptional()
-  allowCaseOrder?:boolean
+  allowCaseOrder?: boolean;
 }

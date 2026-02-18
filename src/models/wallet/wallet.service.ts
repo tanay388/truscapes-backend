@@ -63,8 +63,7 @@ export class WalletService {
     await this.transactionsService.addTransaction(
       TransactionType.CREDIT_ADDED,
       amount,
-      description ||
-        `Credit added by admin: ${admin.name || admin.email}.`,
+      description || `Credit added by admin: ${admin.name || admin.email}.`,
       userId,
     );
 
@@ -160,14 +159,18 @@ export class WalletService {
     return { message: 'Credit due has been cleared' };
   }
 
-  async updateWalletBalance(userId: string, newBalance: number, adminId: string) {
+  async updateWalletBalance(
+    userId: string,
+    newBalance: number,
+    adminId: string,
+  ) {
     const admin = await User.findOne({ where: { id: adminId } });
     if (!admin) {
       throw new NotFoundException('Admin user not found');
     }
 
     const wallet = await this.findOne(userId);
-    const user =await User.findOneBy({id: userId});
+    const user = await User.findOneBy({ id: userId });
     if (!wallet) {
       throw new NotFoundException('User wallet not found');
     }
@@ -200,7 +203,7 @@ export class WalletService {
       user.email,
       user.name,
       newBalance,
-    )
+    );
 
     return {
       ...wallet,

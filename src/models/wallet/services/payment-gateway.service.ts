@@ -111,7 +111,9 @@ export class PaymentGatewayService {
               product_data: {
                 name: 'Payment',
               },
-              unit_amount: parseInt((parseFloat(amount.toFixed(2)) * 100).toString()),
+              unit_amount: parseInt(
+                (parseFloat(amount.toFixed(2)) * 100).toString(),
+              ),
             },
             quantity: 1,
           },
@@ -218,12 +220,12 @@ export class PaymentGatewayService {
       transactionSetting1.setSettingName('duplicateWindow');
       transactionSetting1.setSettingValue('120');
 
-      var transactionSettingList = [];
+      const transactionSettingList = [];
       transactionSettingList.push(transactionSetting1);
 
-      var transactionSettings = new ApiContracts.ArrayOfSetting();
+      const transactionSettings = new ApiContracts.ArrayOfSetting();
       transactionSettings.setSetting(transactionSettingList);
-      var transactionRequestType = new ApiContracts.TransactionRequestType();
+      const transactionRequestType = new ApiContracts.TransactionRequestType();
       transactionRequestType.setTransactionType(
         ApiContracts.TransactionTypeEnum.AUTHONLYTRANSACTION,
       );
@@ -255,7 +257,6 @@ export class PaymentGatewayService {
             ApiContracts.MessageTypeEnum.OK
           ) {
             const transactionResponse = response.getTransactionResponse();
-            
 
             resolve({
               success: true,
@@ -336,9 +337,7 @@ export class PaymentGatewayService {
 
           this.emailService.loadadminEmails(emails.map((email) => email.email));
 
-          await this.emailService.sendNewOrderNotificationToAdmin(
-            order, 
-          );
+          await this.emailService.sendNewOrderNotificationToAdmin(order);
           return {
             success: true,
             requiresAction: false,

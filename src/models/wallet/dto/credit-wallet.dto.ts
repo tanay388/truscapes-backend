@@ -5,8 +5,8 @@ import { Type } from 'class-transformer';
 export class CreditWalletDto {
   @ApiProperty({
     description: 'Amount of credit to add (needs to be paid back)',
-    example: 100.00,
-    minimum: 0
+    example: 100.0,
+    minimum: 0,
   })
   @IsNumber()
   @Min(0)
@@ -16,7 +16,7 @@ export class CreditWalletDto {
   @ApiProperty({
     description: 'Description of the credit transaction',
     example: 'Credit line extended by admin',
-    required: false
+    required: false,
   })
   @IsString()
   @IsOptional()

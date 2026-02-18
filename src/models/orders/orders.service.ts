@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { OrderFilterDto } from './dto/order-filter.dto';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderDto } from './dto/update-order.dto';
@@ -11,7 +15,10 @@ import { Pagination } from 'src/common/dtos/pagination.dto';
 import { PaymentGatewayService } from '../wallet/services/payment-gateway.service';
 import { PaymentGateway } from '../wallet/dto/repay-dues.dto';
 import { NotificationService } from 'src/providers/notification/notification.service';
-import { Transaction, TransactionType } from '../transactions/entities/transaction.entity';
+import {
+  Transaction,
+  TransactionType,
+} from '../transactions/entities/transaction.entity';
 import { EmailService } from 'src/providers/email/email.service';
 import { AdminEmailEntity } from '../emails/entities/admin-email.entity';
 import { CouponsService } from '../coupons/coupons.service';
@@ -32,7 +39,7 @@ export class OrdersService {
     private readonly emailService: EmailService,
     private readonly couponsService: CouponsService,
   ) {
-        // Initialize Stripe
+    // Initialize Stripe
     this.stripe = new Stripe(process.env.STRIPE_SECRET, {
       apiVersion: '2023-10-16',
     });
@@ -70,7 +77,7 @@ export class OrdersService {
     // Determine payment method and get Stripe invoice if applicable
     let paymentMethod = 'Unknown';
     let stripeInvoiceUrl = null;
-    
+
     if (order.paymentIntentId === 'wallet') {
       paymentMethod = 'Wallet';
     } else if (order.paymentIntentId) {
@@ -88,27 +95,41 @@ export class OrdersService {
     });
     doc.on('error', (err) => {
       try {
-        console.error('[OrderPDF]', { orderId, event: 'pdfkit-error', error: err });
+        console.error('[OrderPDF]', {
+          orderId,
+          event: 'pdfkit-error',
+          error: err,
+        });
         stream.destroy(err);
       } catch {}
     });
     stream.on('error', (err) => {
-      try { console.error('[OrderPDF]', { orderId, event: 'stream-error', error: err }); } catch {}
+      try {
+        console.error('[OrderPDF]', {
+          orderId,
+          event: 'stream-error',
+          error: err,
+        });
+      } catch {}
     });
     doc.pipe(stream);
     logStep('pdf-init');
 
     // Helper function for text wrapping
-    const wrapText = (text: string, maxWidth: number, fontSize: number = 10) => {
+    const wrapText = (
+      text: string,
+      maxWidth: number,
+      fontSize: number = 10,
+    ) => {
       doc.fontSize(fontSize);
       const words = text.split(' ');
       const lines = [];
       let currentLine = '';
-      
+
       for (const word of words) {
         const testLine = currentLine ? `${currentLine} ${word}` : word;
         const testWidth = doc.widthOfString(testLine);
-        
+
         if (testWidth <= maxWidth) {
           currentLine = testLine;
         } else {
@@ -120,11 +141,11 @@ export class OrdersService {
           }
         }
       }
-      
+
       if (currentLine) {
         lines.push(currentLine);
       }
-      
+
       return lines;
     };
 
@@ -140,23 +161,27 @@ export class OrdersService {
     // Modern Header with Company Branding
     const headerHeight = 80;
     doc.rect(40, 40, 515, headerHeight).fill('#2563eb').stroke();
-    
+
     // Company name and logo area
-    doc.fillColor('white')
+    doc
+      .fillColor('white')
       .fontSize(28)
       .font('Helvetica-Bold')
       .text('Tru-Scapes', 60, 65);
-    
-    doc.fontSize(12)
+
+    doc
+      .fontSize(12)
       .font('Helvetica')
       .text('Premium Landscaping Solutions', 60, 95);
-    
+
     // Invoice title
-    doc.fontSize(24)
+    doc
+      .fontSize(24)
       .font('Helvetica-Bold')
       .text('INVOICE', 450, 65, { align: 'right' });
-    
-    doc.fontSize(12)
+
+    doc
+      .fontSize(12)
       .font('Helvetica')
       .text(`#${order.id}`, 450, 95, { align: 'right' });
 
@@ -171,22 +196,31 @@ export class OrdersService {
     const cardSpacing = 20;
 
     // Order Details Card
-    doc.rect(40, cardY, cardWidth, cardHeight).fill('#f8fafc').stroke('#e2e8f0');
-    doc.fillColor('#1e293b')
+    doc
+      .rect(40, cardY, cardWidth, cardHeight)
+      .fill('#f8fafc')
+      .stroke('#e2e8f0');
+    doc
+      .fillColor('#1e293b')
       .fontSize(14)
       .font('Helvetica-Bold')
       .text('Order Details', 55, cardY + 15);
-    
-    doc.fontSize(11)
+
+    doc
+      .fontSize(11)
       .font('Helvetica')
       .fillColor('#475569')
       .text('Order Date:', 55, cardY + 35)
       .fillColor('#1e293b')
-      .text(new Date(order.createdAt).toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-      }), 55, cardY + 50)
+      .text(
+        new Date(order.createdAt).toLocaleDateString('en-US', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+        }),
+        55,
+        cardY + 50,
+      )
       .fillColor('#475569')
       .text('Status:', 55, cardY + 65)
       .fillColor('#059669')
@@ -194,13 +228,18 @@ export class OrdersService {
       .text(order.status.replace('_', ' ').toUpperCase(), 55, cardY + 80);
 
     // Customer Information Card
-    doc.rect(40 + cardWidth + cardSpacing, cardY, cardWidth, cardHeight).fill('#f8fafc').stroke('#e2e8f0');
-    doc.fillColor('#1e293b')
+    doc
+      .rect(40 + cardWidth + cardSpacing, cardY, cardWidth, cardHeight)
+      .fill('#f8fafc')
+      .stroke('#e2e8f0');
+    doc
+      .fillColor('#1e293b')
       .fontSize(14)
       .font('Helvetica-Bold')
       .text('Customer Information', 55 + cardWidth + cardSpacing, cardY + 15);
-    
-    doc.fontSize(11)
+
+    doc
+      .fontSize(11)
       .font('Helvetica')
       .fillColor('#475569')
       .text('Name:', 55 + cardWidth + cardSpacing, cardY + 35)
@@ -209,7 +248,10 @@ export class OrdersService {
       .fillColor('#475569')
       .text('Email:', 55 + cardWidth + cardSpacing, cardY + 65)
       .fillColor('#1e293b')
-      .text(order.user.email, 55 + cardWidth + cardSpacing, cardY + 80, { width: cardWidth - 30, ellipsis: true });
+      .text(order.user.email, 55 + cardWidth + cardSpacing, cardY + 80, {
+        width: cardWidth - 30,
+        ellipsis: true,
+      });
 
     doc.y = cardY + cardHeight + 30;
     logStep('cards-rendered');
@@ -217,56 +259,57 @@ export class OrdersService {
     // Shipping Address Section
     if (order.shippingAddress) {
       checkPageBreak(80);
-      doc.fillColor('#1e293b')
+      doc
+        .fillColor('#1e293b')
         .fontSize(14)
         .font('Helvetica-Bold')
         .text('Shipping Address', 40, doc.y);
-      
+
       const addr = order.shippingAddress;
       const addressLines = [
         addr.street,
         `${addr.city}, ${addr.state} ${addr.zipCode}`,
-        addr.country
-      ].filter(line => line && line.trim());
-      
-      doc.fontSize(11)
-        .font('Helvetica')
-        .fillColor('#475569');
-      
+        addr.country,
+      ].filter((line) => line && line.trim());
+
+      doc.fontSize(11).font('Helvetica').fillColor('#475569');
+
       let addressY = doc.y + 20;
-      addressLines.forEach(line => {
+      addressLines.forEach((line) => {
         doc.text(line, 40, addressY);
         addressY += 15;
       });
-      
+
       doc.y = addressY + 10;
     }
     logStep('shipping-rendered');
 
     // Modern Items Table
     checkPageBreak(200);
-    doc.fillColor('#1e293b')
+    doc
+      .fillColor('#1e293b')
       .fontSize(16)
       .font('Helvetica-Bold')
       .text('Order Items', 40, doc.y);
-    
+
     doc.y += 25;
-    
+
     const tableStartY = doc.y;
     const tableWidth = 515;
     const rowHeight = 50;
-    
+
     // Responsive column widths
     const columns = {
       product: { width: 250, x: 40 },
       qty: { width: 60, x: 290 },
       price: { width: 100, x: 350 },
-      total: { width: 105, x: 450 }
+      total: { width: 105, x: 450 },
     };
 
     // Table Header
     doc.rect(40, tableStartY, tableWidth, 40).fill('#f1f5f9').stroke('#e2e8f0');
-    doc.fillColor('#374151')
+    doc
+      .fillColor('#374151')
       .fontSize(12)
       .font('Helvetica-Bold')
       .text('Product', columns.product.x + 10, tableStartY + 15)
@@ -278,12 +321,16 @@ export class OrdersService {
 
     order.items.forEach((item, index) => {
       const pageBreakOccurred = checkPageBreak(rowHeight + 20);
-      
+
       if (pageBreakOccurred) {
         currentRowY = doc.y;
         // Redraw header on new page
-        doc.rect(40, currentRowY, tableWidth, 40).fill('#f1f5f9').stroke('#e2e8f0');
-        doc.fillColor('#374151')
+        doc
+          .rect(40, currentRowY, tableWidth, 40)
+          .fill('#f1f5f9')
+          .stroke('#e2e8f0');
+        doc
+          .fillColor('#374151')
           .fontSize(12)
           .font('Helvetica-Bold')
           .text('Product', columns.product.x + 10, currentRowY + 15)
@@ -295,53 +342,67 @@ export class OrdersService {
 
       // Alternate row colors
       const rowColor = index % 2 === 0 ? '#ffffff' : '#f8fafc';
-      doc.rect(40, currentRowY, tableWidth, rowHeight).fill(rowColor).stroke('#e2e8f0');
+      doc
+        .rect(40, currentRowY, tableWidth, rowHeight)
+        .fill(rowColor)
+        .stroke('#e2e8f0');
 
       // Product name with variant
       const itemName = item.variant
         ? `${item.product.name} (${item.variant.name})`
         : item.product.name;
-      
+
       const productLines = wrapText(itemName, columns.product.width - 20, 11);
-      
-      doc.fillColor('#1e293b')
-        .fontSize(11)
-        .font('Helvetica-Bold');
-      
-      let textY = currentRowY + 10;
+
+      doc.fillColor('#1e293b').fontSize(11).font('Helvetica-Bold');
+
+      const textY = currentRowY + 10;
       productLines.slice(0, 2).forEach((line, lineIndex) => {
-        doc.text(line, columns.product.x + 10, textY + (lineIndex * 12));
+        doc.text(line, columns.product.x + 10, textY + lineIndex * 12);
       });
-      
+
       // SKU
       const sku = item.variant?.sku || `P-${item.product.id}`;
-      doc.fontSize(9)
+      doc
+        .fontSize(9)
         .font('Helvetica')
         .fillColor('#6b7280')
         .text(`SKU: ${sku}`, columns.product.x + 10, textY + 24);
 
       // Quantity
-      doc.fillColor('#1e293b')
+      doc
+        .fillColor('#1e293b')
         .fontSize(12)
         .font('Helvetica')
-        .text(item.quantity.toString(), columns.qty.x + 10, currentRowY + 20, { 
-          align: 'center', 
-          width: columns.qty.width - 20 
+        .text(item.quantity.toString(), columns.qty.x + 10, currentRowY + 20, {
+          align: 'center',
+          width: columns.qty.width - 20,
         });
 
       // Unit Price
-      doc.text(`$${parseFloat(item.price.toString()).toFixed(2)}`, columns.price.x + 10, currentRowY + 20, { 
-        align: 'right', 
-        width: columns.price.width - 20 
-      });
+      doc.text(
+        `$${parseFloat(item.price.toString()).toFixed(2)}`,
+        columns.price.x + 10,
+        currentRowY + 20,
+        {
+          align: 'right',
+          width: columns.price.width - 20,
+        },
+      );
 
       // Total
-      doc.fontSize(12)
+      doc
+        .fontSize(12)
         .font('Helvetica-Bold')
-        .text(`$${(parseFloat(item.price.toString()) * item.quantity).toFixed(2)}`, columns.total.x + 10, currentRowY + 20, { 
-          align: 'right', 
-          width: columns.total.width - 20 
-        });
+        .text(
+          `$${(parseFloat(item.price.toString()) * item.quantity).toFixed(2)}`,
+          columns.total.x + 10,
+          currentRowY + 20,
+          {
+            align: 'right',
+            width: columns.total.width - 20,
+          },
+        );
 
       currentRowY += rowHeight;
     });
@@ -354,92 +415,123 @@ export class OrdersService {
     const totalsX = 350;
     const totalsWidth = 205;
     const totalsY = doc.y;
-    
+
     // Calculate height based on coupon
     const hasCoupon = order.discountAmount && order.discountAmount > 0;
     const totalsHeight = hasCoupon ? 140 : 110;
 
-    doc.rect(totalsX, totalsY, totalsWidth, totalsHeight).fill('#f8fafc').stroke('#e2e8f0');
-    
+    doc
+      .rect(totalsX, totalsY, totalsWidth, totalsHeight)
+      .fill('#f8fafc')
+      .stroke('#e2e8f0');
+
     // Subtotal
-    doc.fillColor('#6b7280')
+    doc
+      .fillColor('#6b7280')
       .fontSize(12)
       .font('Helvetica')
       .text('Subtotal:', totalsX + 15, totalsY + 20)
       .fillColor('#1e293b')
-      .text(`$${parseFloat(order.subtotal.toString()).toFixed(2)}`, totalsX + 15, totalsY + 20, { 
-        width: totalsWidth - 30, 
-        align: 'right' 
-      });
-    
+      .text(
+        `$${parseFloat(order.subtotal.toString()).toFixed(2)}`,
+        totalsX + 15,
+        totalsY + 20,
+        {
+          width: totalsWidth - 30,
+          align: 'right',
+        },
+      );
+
     // Shipping
-    doc.fillColor('#6b7280')
+    doc
+      .fillColor('#6b7280')
       .text('Shipping:', totalsX + 15, totalsY + 40)
       .fillColor('#1e293b')
-      .text(`$${parseFloat(order.shippingCost.toString()).toFixed(2)}`, totalsX + 15, totalsY + 40, { 
-        width: totalsWidth - 30, 
-        align: 'right' 
-      });
+      .text(
+        `$${parseFloat(order.shippingCost.toString()).toFixed(2)}`,
+        totalsX + 15,
+        totalsY + 40,
+        {
+          width: totalsWidth - 30,
+          align: 'right',
+        },
+      );
 
     let finalTotalY = totalsY + 60;
-    
+
     // Coupon discount
     if (hasCoupon) {
-      doc.fillColor('#dc2626')
+      doc
+        .fillColor('#dc2626')
         .text('Discount:', totalsX + 15, totalsY + 60)
-        .text(`-$${parseFloat(order.discountAmount.toString()).toFixed(2)}`, totalsX + 15, totalsY + 60, { 
-          width: totalsWidth - 30, 
-          align: 'right' 
-        });
-      
+        .text(
+          `-$${parseFloat(order.discountAmount.toString()).toFixed(2)}`,
+          totalsX + 15,
+          totalsY + 60,
+          {
+            width: totalsWidth - 30,
+            align: 'right',
+          },
+        );
+
       if (order.couponCode) {
-        doc.fontSize(10)
+        doc
+          .fontSize(10)
           .fillColor('#6b7280')
-          .text(`(${order.couponCode})`, totalsX + 15, totalsY + 75, { 
-            width: totalsWidth - 30, 
-            align: 'right' 
+          .text(`(${order.couponCode})`, totalsX + 15, totalsY + 75, {
+            width: totalsWidth - 30,
+            align: 'right',
           });
       }
       finalTotalY = totalsY + 90;
     }
 
     // Total line
-    doc.lineWidth(1)
+    doc
+      .lineWidth(1)
       .strokeColor('#e2e8f0')
       .moveTo(totalsX + 15, finalTotalY)
       .lineTo(totalsX + totalsWidth - 15, finalTotalY)
       .stroke();
 
     // Final Total
-    doc.fillColor('#1e293b')
+    doc
+      .fillColor('#1e293b')
       .fontSize(16)
       .font('Helvetica-Bold')
       .text('Total:', totalsX + 15, finalTotalY + 15)
-      .text(`$${parseFloat(order.total.toString()).toFixed(2)}`, totalsX + 15, finalTotalY + 15, { 
-        width: totalsWidth - 30, 
-        align: 'right' 
-      });
+      .text(
+        `$${parseFloat(order.total.toString()).toFixed(2)}`,
+        totalsX + 15,
+        finalTotalY + 15,
+        {
+          width: totalsWidth - 30,
+          align: 'right',
+        },
+      );
 
     doc.y = totalsY + totalsHeight + 30;
     logStep('totals-rendered');
 
     // Payment Information
     checkPageBreak(100);
-    doc.fillColor('#1e293b')
+    doc
+      .fillColor('#1e293b')
       .fontSize(14)
       .font('Helvetica-Bold')
       .text('Payment Information', 40, doc.y);
-    
-    doc.fontSize(11)
+
+    doc
+      .fontSize(11)
       .font('Helvetica')
       .fillColor('#475569')
       .text(`Payment Method: ${paymentMethod}`, 40, doc.y + 25);
     logStep('payment-info-rendered');
-    
-    
+
     // Purchase Order if available
     if (order.paymentOrder) {
-      doc.fillColor('#475569')
+      doc
+        .fillColor('#475569')
         .text(`Purchase Order: ${order.paymentOrder}`, 40, doc.y + 10);
     }
 
@@ -448,33 +540,32 @@ export class OrdersService {
     // Notes Section
     if (order.notes || order.adminNotes) {
       checkPageBreak(40);
-      doc.fillColor('#1e293b')
+      doc
+        .fillColor('#1e293b')
         .fontSize(14)
         .font('Helvetica-Bold')
         .text('Order Notes', 40, doc.y);
-      
-      doc.fontSize(11)
-        .font('Helvetica')
-        .fillColor('#475569');
-      
+
+      doc.fontSize(11).font('Helvetica').fillColor('#475569');
+
       let notesY = doc.y + 15;
       if (order.notes) {
-        doc.text(`Customer Notes: ${order.notes}`, 40, notesY, { 
-          width: 515, 
+        doc.text(`Customer Notes: ${order.notes}`, 40, notesY, {
+          width: 515,
           align: 'left',
-          lineGap: 3
+          lineGap: 3,
         });
         notesY += 40;
       }
       if (order.adminNotes) {
-        doc.text(`Admin Notes: ${order.adminNotes}`, 40, notesY, { 
-          width: 515, 
+        doc.text(`Admin Notes: ${order.adminNotes}`, 40, notesY, {
+          width: 515,
           align: 'left',
-          lineGap: 3
+          lineGap: 3,
         });
         notesY += 40;
       }
-      
+
       doc.y = notesY;
     }
     logStep('notes-rendered');
@@ -482,13 +573,14 @@ export class OrdersService {
     // Stripe invoice link if available
     if (stripeInvoiceUrl) {
       checkPageBreak(50);
-      doc.fillColor('#1e293b')
+      doc
+        .fillColor('#1e293b')
         .fontSize(12)
         .font('Helvetica')
         .text('Online Invoice: ', 40, doc.y, { continued: true })
         .fillColor('#2563eb')
         .text('View Invoice', { underline: true, link: stripeInvoiceUrl });
-      
+
       doc.y += 15;
     }
     logStep('stripe-link-rendered');
@@ -496,18 +588,23 @@ export class OrdersService {
     // Footer
     const footerY = doc.y;
     doc.y = footerY;
-    doc.lineWidth(0.5)
+    doc
+      .lineWidth(0.5)
       .strokeColor('#e2e8f0')
       .moveTo(40, footerY)
       .lineTo(555, footerY)
       .stroke();
-    
-    doc.fillColor('#6b7280')
+
+    doc
+      .fillColor('#6b7280')
       .fontSize(10)
       .font('Helvetica')
       .text('Thank you for your business!', 40, footerY + 15)
-      .text('For questions about this invoice, contact us at support@tru-scapes.com', 40, footerY + 30)
-      
+      .text(
+        'For questions about this invoice, contact us at support@tru-scapes.com',
+        40,
+        footerY + 30,
+      );
 
     // Finalize PDF
     // doc.on('end', () => {
@@ -535,84 +632,135 @@ export class OrdersService {
 
       // Apply filters
       if (filter?.status) {
-        queryBuilder.andWhere('order.status = :status', { status: filter.status });
+        queryBuilder.andWhere('order.status = :status', {
+          status: filter.status,
+        });
       }
       if (filter?.minAmount) {
-        queryBuilder.andWhere('order.total >= :minAmount', { minAmount: filter.minAmount });
+        queryBuilder.andWhere('order.total >= :minAmount', {
+          minAmount: filter.minAmount,
+        });
       }
       if (filter?.maxAmount) {
-        queryBuilder.andWhere('order.total <= :maxAmount', { maxAmount: filter.maxAmount });
+        queryBuilder.andWhere('order.total <= :maxAmount', {
+          maxAmount: filter.maxAmount,
+        });
       }
       if (filter?.startDate) {
-        queryBuilder.andWhere('order.createdAt >= :startDate', { startDate: new Date(filter.startDate) });
+        queryBuilder.andWhere('order.createdAt >= :startDate', {
+          startDate: new Date(filter.startDate),
+        });
       }
       if (filter?.endDate) {
-        queryBuilder.andWhere('order.createdAt <= :endDate', { endDate: new Date(filter.endDate) });
+        queryBuilder.andWhere('order.createdAt <= :endDate', {
+          endDate: new Date(filter.endDate),
+        });
       }
 
       const orders = await queryBuilder.getMany();
 
       if (!orders || orders.length === 0) {
-        throw new BadRequestException('No orders found matching the filter criteria');
+        throw new BadRequestException(
+          'No orders found matching the filter criteria',
+        );
       }
 
       const workbook = XLSX.utils.book_new();
       const worksheet = XLSX.utils.json_to_sheet([]);
 
       // Add headers
-      XLSX.utils.sheet_add_aoa(worksheet, [[
-        'Order ID', 'Date', 'Status', 'Payment Status',
-        'Customer Name', 'Customer Email',
-        'Product Name', 'Variant', 'Quantity', 'Price', 'Item Total',
-        'Subtotal', 'Shipping Cost', 'Coupon Code', 'Discount Amount', 'Total',
-        'Shipping Address', 'Notes', 'Tracking Number'
-      ]], { origin: 'A1' });
+      XLSX.utils.sheet_add_aoa(
+        worksheet,
+        [
+          [
+            'Order ID',
+            'Date',
+            'Status',
+            'Payment Status',
+            'Customer Name',
+            'Customer Email',
+            'Product Name',
+            'Variant',
+            'Quantity',
+            'Price',
+            'Item Total',
+            'Subtotal',
+            'Shipping Cost',
+            'Coupon Code',
+            'Discount Amount',
+            'Total',
+            'Shipping Address',
+            'Notes',
+            'Tracking Number',
+          ],
+        ],
+        { origin: 'A1' },
+      );
 
       // Prepare data rows
-      const data = orders.flatMap(order => {
+      const data = orders.flatMap((order) => {
         if (!order?.items?.length) return [];
 
-        return order.items.map(item => ({
+        return order.items.map((item) => ({
           'Order ID': order?.id || 'N/A',
-           'Date': order?.createdAt ? new Date(order.createdAt).toLocaleDateString() : 'N/A',
-           'Status': order?.status || 'N/A',
-           'Payment Status': order?.paymentStatus || 'N/A',
-           'Customer Name': order?.user?.name || 'N/A',
-           'Customer Email': order?.user?.email || 'N/A',
-           'Product Name': item?.product?.name || 'N/A',
-           'Variant': item?.variant?.name || 'N/A',
-           'Quantity': item?.quantity || 0,
-           'Price': item?.price || 0,
-           'Item Total': item?.total || 0,
-           'Subtotal': order?.subtotal || 0,
-           'Shipping Cost': order?.shippingCost || 0,
-           'Coupon Code': order?.couponCode || '',
-           'Discount Amount': order?.discountAmount || 0,
-           'Total': order?.total || 0,
-           'Shipping Address': order?.shippingAddress ? `${order.shippingAddress.street || ''}, ${order.shippingAddress.city || ''}, ${order.shippingAddress.state || ''}, ${order.shippingAddress.country || ''} ${order.shippingAddress.zipCode || ''}`.trim() : 'N/A',
-           'Notes': order?.notes || '',
-           'Tracking Number': order?.trackingNumber || ''
+          Date: order?.createdAt
+            ? new Date(order.createdAt).toLocaleDateString()
+            : 'N/A',
+          Status: order?.status || 'N/A',
+          'Payment Status': order?.paymentStatus || 'N/A',
+          'Customer Name': order?.user?.name || 'N/A',
+          'Customer Email': order?.user?.email || 'N/A',
+          'Product Name': item?.product?.name || 'N/A',
+          Variant: item?.variant?.name || 'N/A',
+          Quantity: item?.quantity || 0,
+          Price: item?.price || 0,
+          'Item Total': item?.total || 0,
+          Subtotal: order?.subtotal || 0,
+          'Shipping Cost': order?.shippingCost || 0,
+          'Coupon Code': order?.couponCode || '',
+          'Discount Amount': order?.discountAmount || 0,
+          Total: order?.total || 0,
+          'Shipping Address': order?.shippingAddress
+            ? `${order.shippingAddress.street || ''}, ${order.shippingAddress.city || ''}, ${order.shippingAddress.state || ''}, ${order.shippingAddress.country || ''} ${order.shippingAddress.zipCode || ''}`.trim()
+            : 'N/A',
+          Notes: order?.notes || '',
+          'Tracking Number': order?.trackingNumber || '',
         }));
       });
 
       if (!data || data.length === 0) {
-        throw new BadRequestException('No valid order data available for export');
+        throw new BadRequestException(
+          'No valid order data available for export',
+        );
       }
 
       // Add data to worksheet
-      XLSX.utils.sheet_add_json(worksheet, data, { origin: 'A2', skipHeader: true });
+      XLSX.utils.sheet_add_json(worksheet, data, {
+        origin: 'A2',
+        skipHeader: true,
+      });
 
       // Auto-size columns
-      const max_width = data.reduce((w, r) => Math.max(w, Object.values(r).join('').length), 10);
-      const wscols = Array(Object.keys(data[0] || {}).length).fill({ wch: Math.min(max_width, 50) });
+      const max_width = data.reduce(
+        (w, r) => Math.max(w, Object.values(r).join('').length),
+        10,
+      );
+      const wscols = Array(Object.keys(data[0] || {}).length).fill({
+        wch: Math.min(max_width, 50),
+      });
       worksheet['!cols'] = wscols;
 
       XLSX.utils.book_append_sheet(workbook, worksheet, 'Orders');
-      const excelBuffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+      const excelBuffer = XLSX.write(workbook, {
+        type: 'buffer',
+        bookType: 'xlsx',
+      });
 
       return excelBuffer;
     } catch (error) {
-      throw new BadRequestException('Failed to generate Excel file: ' + error.message);
+      throw new BadRequestException(
+        'Failed to generate Excel file: ' + error.message,
+      );
     }
   }
 
@@ -620,7 +768,7 @@ export class OrdersService {
     if (subtotal >= 0) {
       return 0; // Free shipping for orders $2500 and above
     }
-    const shippingCost =  subtotal * 0.05; // 5% shipping for orders under $2500
+    const shippingCost = subtotal * 0.05; // 5% shipping for orders under $2500
     return Math.max(shippingCost, 10);
   };
 
@@ -681,17 +829,15 @@ export class OrdersService {
       const casePricePerQuantity = price * 0.95;
       const caseSize = parseInt(product.caseSize.toString());
 
-      if(caseSize && product.allowCaseOrder) {
-        if(parseInt(item.quantity.toString())%caseSize === 0) {
-          price = casePricePerQuantity ;
+      if (caseSize && product.allowCaseOrder) {
+        if (parseInt(item.quantity.toString()) % caseSize === 0) {
+          price = casePricePerQuantity;
         }
       }
 
       console.log('userPrice' + ' ' + price);
       const total =
         parseFloat(price.toString()) * parseFloat(item.quantity.toString());
-
-      
 
       const orderItem = new OrderItem();
       orderItem.product = product;
@@ -709,7 +855,7 @@ export class OrdersService {
     // Calculate shipping cost (you can implement your own logic)
     let shippingCost = this.calculateShipping(subtotal); // Default shipping cost
 
-    if(createOrderDto.shippingAddress.city === 'Store Collection') {
+    if (createOrderDto.shippingAddress.city === 'Store Collection') {
       shippingCost = 0;
     }
 
@@ -717,7 +863,7 @@ export class OrdersService {
     let discountAmount = 0;
     let appliedCoupon = null;
     let couponCode = null;
-    
+
     if (createOrderDto.couponCode) {
       const couponValidation = await this.couponsService.validateAndApplyCoupon(
         {
@@ -748,7 +894,9 @@ export class OrdersService {
     order.appliedCoupon = appliedCoupon;
     order.couponCode = couponCode;
     order.total =
-      parseFloat(subtotal.toString()) + parseFloat(shippingCost.toString()) - parseFloat(discountAmount.toString());
+      parseFloat(subtotal.toString()) +
+      parseFloat(shippingCost.toString()) -
+      parseFloat(discountAmount.toString());
     order.status = OrderStatus.PAYMENT_PENDING;
     order.paymentStatus = PaymentStatus.PENDING;
 
@@ -798,9 +946,7 @@ export class OrdersService {
         order,
       );
 
-      await this.emailService.sendNewOrderNotificationToAdmin(
-        order,
-      );
+      await this.emailService.sendNewOrderNotificationToAdmin(order);
 
       return {
         success: true,
@@ -876,13 +1022,13 @@ export class OrdersService {
 
     // Record coupon usage if coupon was applied
     if (order.appliedCoupon && order.discountAmount > 0) {
-        await this.couponsService.recordCouponUsage(
-          order.appliedCoupon.id,
-          userId,
-          order.id.toString(),
-          order.discountAmount,
-          order.subtotal + order.shippingCost,
-        );
+      await this.couponsService.recordCouponUsage(
+        order.appliedCoupon.id,
+        userId,
+        order.id.toString(),
+        order.discountAmount,
+        order.subtotal + order.shippingCost,
+      );
     }
 
     // Send notification
@@ -913,19 +1059,27 @@ export class OrdersService {
       }
 
       if (filter?.minAmount) {
-        query.andWhere('order.total >= :minAmount', { minAmount: filter.minAmount });
+        query.andWhere('order.total >= :minAmount', {
+          minAmount: filter.minAmount,
+        });
       }
 
       if (filter?.maxAmount) {
-        query.andWhere('order.total <= :maxAmount', { maxAmount: filter.maxAmount });
+        query.andWhere('order.total <= :maxAmount', {
+          maxAmount: filter.maxAmount,
+        });
       }
 
       if (filter?.startDate) {
-        query.andWhere('order.createdAt >= :startDate', { startDate: filter.startDate });
+        query.andWhere('order.createdAt >= :startDate', {
+          startDate: filter.startDate,
+        });
       }
 
       if (filter?.endDate) {
-        query.andWhere('order.createdAt <= :endDate', { endDate: filter.endDate });
+        query.andWhere('order.createdAt <= :endDate', {
+          endDate: filter.endDate,
+        });
       }
 
       // Flexible search across order/user/product fields
@@ -953,10 +1107,7 @@ export class OrdersService {
       }
 
       // Add pagination and ordering
-      query
-        .orderBy('order.createdAt', 'DESC')
-        .skip(skip)
-        .take(take);
+      query.orderBy('order.createdAt', 'DESC').skip(skip).take(take);
 
       const [orders, total] = await query.getManyAndCount();
 
@@ -997,34 +1148,34 @@ export class OrdersService {
       .withDeleted()
       .getOne();
 
-      if(order.paymentIntentId && order.paymentIntentId.startsWith('cs_')){
-        try{
-        const cs = await this.stripe.checkout.sessions.retrieve(order.paymentIntentId, {
-          expand: [
-            'payment_intent',
-            'payment_intent.latest_charge',
-            'invoice' // sometimes useful
-          ]
-        });
-        
+    if (order.paymentIntentId && order.paymentIntentId.startsWith('cs_')) {
+      try {
+        const cs = await this.stripe.checkout.sessions.retrieve(
+          order.paymentIntentId,
+          {
+            expand: [
+              'payment_intent',
+              'payment_intent.latest_charge',
+              'invoice', // sometimes useful
+            ],
+          },
+        );
+
         order.checkoutSessionId = cs.id;
         order.paymentIntentId = (cs.payment_intent as Stripe.PaymentIntent).id;
-        const charge = (
-          (cs.payment_intent as Stripe.PaymentIntent).latest_charge as Stripe.Charge
-        );
-        const card = (
-              charge.payment_method_details as any
-          ).card as Stripe.Card;
+        const charge = (cs.payment_intent as Stripe.PaymentIntent)
+          .latest_charge as Stripe.Charge;
+        const card = (charge.payment_method_details as any).card as Stripe.Card;
 
         order.cardDetail = card.brand.toUpperCase() + ' - ' + card.last4;
 
         order.receiptUrl = charge.receipt_url;
 
         await order.save();
-        } catch (error) {
-          console.log(error);
-        }
+      } catch (error) {
+        console.log(error);
       }
+    }
 
     if (!order) {
       throw new NotFoundException('Order not found');
@@ -1073,7 +1224,7 @@ export class OrdersService {
         order.user.email,
         order.user.name,
         order,
-        order.status
+        order.status,
       );
 
     if (order.status === OrderStatus.DELIVERED)

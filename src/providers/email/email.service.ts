@@ -174,7 +174,11 @@ export class EmailService {
     });
   }
 
-  async sendPasswordResetNotificationEmail(to: string, customerName: string, newPassword: string) {
+  async sendPasswordResetNotificationEmail(
+    to: string,
+    customerName: string,
+    newPassword: string,
+  ) {
     return this.sendEmail({
       to,
       subject: 'Your Tru-Scapes® Password Has Been Reset',
@@ -194,7 +198,11 @@ export class EmailService {
     });
   }
 
-  async sendPasswordResetLinkEmail(to: string, customerName: string, resetLink: string) {
+  async sendPasswordResetLinkEmail(
+    to: string,
+    customerName: string,
+    resetLink: string,
+  ) {
     return this.sendEmail({
       to,
       subject: 'Reset Your Tru-Scapes® Password',
@@ -312,11 +320,11 @@ export class EmailService {
   async sendOrderConfirmationEmail(
     to: string,
     customerName: string,
-    orderDetails: Order
+    orderDetails: Order,
   ) {
     return this.sendEmail({
       to,
-      subject: `Your New Tru-Scapes® Order #${orderDetails.id} - ${orderDetails.items[0].product.name} [] ${orderDetails.items.length } items ] Is Confirmed`,
+      subject: `Your New Tru-Scapes® Order #${orderDetails.id} - ${orderDetails.items[0].product.name} [] ${orderDetails.items.length} items ] Is Confirmed`,
       html: `
         <p>Hello ${customerName},</p>
         <p>Thanks for choosing Tru-Scapes®! We're excited to let you know that your order Id: #${orderDetails.id} is confirmed and is now being processed.</p>
@@ -352,7 +360,9 @@ export class EmailService {
                   <td style="padding: 8px; border: 1px solid #dee2e6; text-align: right;">$${parseFloat(item.price.toString()).toFixed(2)}</td>
                   <td style="padding: 8px; border: 1px solid #dee2e6; text-align: right;">$${parseFloat(item.total.toString()).toFixed(2)}</td>
                 </tr>
-              `).join('')}
+              `,
+              )
+              .join('')}
             <tr style="background-color: #f8f9fa;">
               <td colspan="4" style="padding: 8px; border: 1px solid #dee2e6; text-align: right;"><strong>Subtotal:</strong></td>
               <td style="padding: 8px; border: 1px solid #dee2e6; text-align: right;">$${parseFloat(orderDetails.subtotal.toString()).toFixed(2)}</td>
@@ -440,7 +450,9 @@ export class EmailService {
                   <td style="padding: 8px; border: 1px solid #dee2e6; text-align: right;">$${parseFloat(item.price.toString()).toFixed(2)}</td>
                   <td style="padding: 8px; border: 1px solid #dee2e6; text-align: right;">$${parseFloat(item.total.toString()).toFixed(2)}</td>
                 </tr>
-              `).join('')}
+              `,
+              )
+              .join('')}
             <tr style="background-color: #f8f9fa;">
               <td colspan="4" style="padding: 8px; border: 1px solid #dee2e6; text-align: right;"><strong>Subtotal:</strong></td>
               <td style="padding: 8px; border: 1px solid #dee2e6; text-align: right;">$${parseFloat(orderDetails.subtotal.toString()).toFixed(2)}</td>
@@ -470,10 +482,14 @@ export class EmailService {
           </div>
 
           <div class="notes-section">
-            ${orderDetails.notes ? `
+            ${
+              orderDetails.notes
+                ? `
             <h3>Order Notes:</h3>
             <p>${orderDetails.notes}</p>
-            ` : ''}
+            `
+                : ''
+            }
           </div>
         </div>
         <p>Please review this order and process it according to our standard procedures. Remember to check inventory levels and shipping requirements.</p>
@@ -487,7 +503,7 @@ export class EmailService {
     to: string,
     customerName: string,
     orderDetails: Order,
-    newStatus: string
+    newStatus: string,
   ) {
     return this.sendEmail({
       to,
@@ -514,7 +530,9 @@ export class EmailService {
                 <th style="padding: 10px; text-align: right; border: 1px solid #dee2e6;">Price</th>
                 <th style="padding: 10px; text-align: right; border: 1px solid #dee2e6;">Total</th>
               </tr>
-              ${orderDetails.items.map(item => `
+              ${orderDetails.items
+                .map(
+                  (item) => `
                 <tr>
                   <td style="padding: 10px; border: 1px solid #dee2e6;">
                     ${item.product.name}
@@ -525,17 +543,23 @@ export class EmailService {
                   <td style="padding: 10px; text-align: right; border: 1px solid #dee2e6;">$${parseFloat(item.price.toString()).toFixed(2)}</td>
                   <td style="padding: 10px; text-align: right; border: 1px solid #dee2e6;">$${(parseFloat(item.price.toString()) * item.quantity).toFixed(2)}</td>
                 </tr>
-              `).join('')}
+              `,
+                )
+                .join('')}
               <tr>
                 <td colspan="4" style="padding: 10px; text-align: right; border: 1px solid #dee2e6;"><strong>Subtotal:</strong></td>
                 <td style="padding: 10px; text-align: right; border: 1px solid #dee2e6;">$${parseFloat(orderDetails.subtotal.toString()).toFixed(2)}</td>
               </tr>
-              ${orderDetails.shippingCost ? `
+              ${
+                orderDetails.shippingCost
+                  ? `
                 <tr>
                   <td colspan="4" style="padding: 10px; text-align: right; border: 1px solid #dee2e6;"><strong>Delivery charges:</strong></td>
                   <td style="padding: 10px; text-align: right; border: 1px solid #dee2e6;">$${parseFloat(orderDetails.shippingCost.toString()).toFixed(2)}</td>
                 </tr>
-              ` : ''}
+              `
+                  : ''
+              }
               <tr>
                 <td colspan="4" style="padding: 10px; text-align: right; border: 1px solid #dee2e6;"><strong>Total:</strong></td>
                 <td style="padding: 10px; text-align: right; border: 1px solid #dee2e6;"><strong>$${parseFloat(orderDetails.total.toString()).toFixed(2)}</strong></td>
@@ -550,14 +574,18 @@ export class EmailService {
               <p>${orderDetails.shippingAddress.city}, ${orderDetails.shippingAddress.state}</p>
               <p>${orderDetails.shippingAddress.country}, ${orderDetails.shippingAddress.zipCode}</p>
             </div>
-            ${orderDetails.shippingAddress ? `
+            ${
+              orderDetails.shippingAddress
+                ? `
               <div class="billing-address">
                 <h2>Billing Address:</h2>
                 <p>${orderDetails.shippingAddress.street}</p>
                 <p>${orderDetails.shippingAddress.city}, ${orderDetails.shippingAddress.state}</p>
                 <p>${orderDetails.shippingAddress.country}, ${orderDetails.shippingAddress.zipCode}</p>
               </div>
-            ` : ''}
+            `
+                : ''
+            }
           </div>
         </div>
         <p>We're working to ensure everything goes smoothly. If you have any questions or need more info, just reply to this email, and we'll be happy to help.</p>

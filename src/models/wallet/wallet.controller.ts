@@ -79,13 +79,18 @@ export class WalletController {
   @AdminOnly()
   @ApiOperation({
     summary: 'Update wallet balance (Admin only)',
-    description: 'Updates user wallet balance and creates corresponding transaction record',
+    description:
+      'Updates user wallet balance and creates corresponding transaction record',
   })
   updateWalletBalance(
     @Param('userId') userId: string,
     @Body() updateBalanceDto: UpdateWalletBalanceDto,
     @FUser() admin: FirebaseUser,
   ) {
-    return this.walletService.updateWalletBalance(userId, updateBalanceDto.newBalance, admin.uid);
+    return this.walletService.updateWalletBalance(
+      userId,
+      updateBalanceDto.newBalance,
+      admin.uid,
+    );
   }
 }

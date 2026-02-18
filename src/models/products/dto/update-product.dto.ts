@@ -5,7 +5,8 @@ import { ProductStatus } from '../entities/product.entity';
 
 export class UpdateProductDto extends PartialType(CreateProductDto) {
   @ApiPropertyOptional({
-    description: 'State of the product. Note: ACTIVE status requires at least one variant and one media item.',
+    description:
+      'State of the product. Note: ACTIVE status requires at least one variant and one media item.',
     example: 'DRAFT',
     required: false,
     enum: ProductStatus,

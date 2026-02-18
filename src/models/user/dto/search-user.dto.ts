@@ -5,21 +5,21 @@ import { UserRole } from '../entities/user.entity';
 
 export class SearchUserDto extends Pagination {
   @ApiPropertyOptional({
-    description: 'Search query that matches against user name or email'
+    description: 'Search query that matches against user name or email',
   })
   @IsOptional()
   @IsString()
   query?: string;
 
   @ApiPropertyOptional({
-    description: 'Role of the user to search for'
+    description: 'Role of the user to search for',
   })
   @IsOptional()
   @IsEnum(UserRole)
   role?: UserRole;
 
   @ApiPropertyOptional({
-    description: 'Approval status of the user to search for'
+    description: 'Approval status of the user to search for',
   })
   @IsOptional()
   @IsEnum({

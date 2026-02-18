@@ -46,7 +46,7 @@ export class OrdersController {
   }
 
   @Get('my-orders')
-  @ApiOperation({ summary: 'Get current user\'s orders' })
+  @ApiOperation({ summary: "Get current user's orders" })
   getMyOrders(@FUser() user: FirebaseUser, @Query() pagination: Pagination) {
     return this.ordersService.findUserOrders(user.uid, pagination);
   }
@@ -67,7 +67,8 @@ export class OrdersController {
   ) {
     const buffer = await this.ordersService.exportOrdersToExcel(filter);
     res.set({
-      'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'Content-Type':
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       'Content-Disposition': 'attachment; filename=orders.xlsx',
       'Content-Length': buffer.length,
     });
@@ -99,7 +100,7 @@ export class OrdersController {
   ) {
     const { stream, filename } = await this.ordersService.generateOrderPdf(id);
     // Ensure cleanup if client disconnects mid-stream
-    
+
     res.set({
       'Content-Type': 'application/pdf',
       'Content-Disposition': `attachment; filename=${filename}`,

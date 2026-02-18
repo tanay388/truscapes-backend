@@ -1,11 +1,5 @@
 // product.entity.ts
-import {
-  Entity,
-  Column,
-  OneToMany,
-  ManyToOne,
-  RelationId,
-} from 'typeorm';
+import { Entity, Column, OneToMany, ManyToOne, RelationId } from 'typeorm';
 import { Category } from 'src/models/category/entities/category.entity';
 import { BaseClassEntity } from 'src/common/entities/base.extend-entity';
 import { ProductVariant } from './product-variant.entity';
@@ -39,17 +33,16 @@ export class Product extends BaseClassEntity {
   @Column({ type: 'boolean', default: true })
   stockAvailable: boolean;
 
-
   @Column({ type: 'boolean', default: false })
   hotProduct: boolean;
 
   @Column({ type: 'integer', default: 0 })
   index: number;
 
-  @Column({type: 'boolean', default: true})
+  @Column({ type: 'boolean', default: true })
   allowCaseOrder: boolean;
 
-  @Column({type: 'integer', default: 12})
+  @Column({ type: 'integer', default: 12 })
   caseSize: number;
 
   @Column({ type: 'integer', default: 0 })
@@ -76,8 +69,8 @@ export class Product extends BaseClassEntity {
   })
   variants: ProductVariant[];
 
-//   // Utility method to get variant by ID
-//   getVariantById(variantId: number): ProductVariant | undefined {
-//     return this.variants?.find((variant) => variant.id === variantId);
-//   }
+  //   // Utility method to get variant by ID
+  //   getVariantById(variantId: number): ProductVariant | undefined {
+  //     return this.variants?.find((variant) => variant.id === variantId);
+  //   }
 }
