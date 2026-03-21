@@ -1088,13 +1088,15 @@ export class OrdersService {
         const numericId = Number(filter.q);
         const hasNumericId = Number.isFinite(numericId);
         const whereParts = [
-          'LOWER(user.name) LIKE LOWER(:term)',
-          'LOWER(user.email) LIKE LOWER(:term)',
-          'user.phone LIKE :term',
-          'order.paymentOrder LIKE :term',
-          'order.trackingNumber LIKE :term',
-          'product.name LIKE :term',
-          'variant.name LIKE :term',
+          "LOWER(COALESCE(user.name, '')) LIKE LOWER(:term)",
+          "LOWER(COALESCE(user.email, '')) LIKE LOWER(:term)",
+          "LOWER(COALESCE(user.company, '')) LIKE LOWER(:term)",
+          "LOWER(COALESCE(user.companyAddress, '')) LIKE LOWER(:term)",
+          "LOWER(COALESCE(user.phone, '')) LIKE LOWER(:term)",
+          "LOWER(COALESCE(order.paymentOrder, '')) LIKE LOWER(:term)",
+          "LOWER(COALESCE(order.trackingNumber, '')) LIKE LOWER(:term)",
+          "LOWER(COALESCE(product.name, '')) LIKE LOWER(:term)",
+          "LOWER(COALESCE(variant.name, '')) LIKE LOWER(:term)",
         ];
         // Add ID equality if q is numeric
         if (hasNumericId) {
