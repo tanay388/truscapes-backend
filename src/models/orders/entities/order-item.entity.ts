@@ -21,9 +21,9 @@ export class OrderItem extends BaseClassEntity {
   @Column()
   quantity: number;
 
-  @Column('decimal', { precision: 10, scale: 2 })
-  price: number;
+  @Column('decimal', { precision: 10, scale: 3 })
+  price: string;
 
   @Column('decimal', { precision: 10, scale: 2 })
-  total: number;
+  total: string;
 }

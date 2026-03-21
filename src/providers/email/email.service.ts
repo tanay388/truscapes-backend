@@ -357,7 +357,7 @@ export class EmailService {
                   </td>
                   <td style="padding: 8px; border: 1px solid #dee2e6;">${item.product.id || 'N/A'}</td>
                   <td style="padding: 8px; border: 1px solid #dee2e6; text-align: center;">${item.quantity}</td>
-                  <td style="padding: 8px; border: 1px solid #dee2e6; text-align: right;">$${parseFloat(item.price.toString()).toFixed(2)}</td>
+                  <td style="padding: 8px; border: 1px solid #dee2e6; text-align: right;">$${parseFloat(item.price.toString()).toFixed(3)}</td>
                   <td style="padding: 8px; border: 1px solid #dee2e6; text-align: right;">$${parseFloat(item.total.toString()).toFixed(2)}</td>
                 </tr>
               `,
@@ -447,7 +447,7 @@ export class EmailService {
                   </td>
                   <td style="padding: 8px; border: 1px solid #dee2e6;">${item.product.id || 'N/A'}</td>
                   <td style="padding: 8px; border: 1px solid #dee2e6; text-align: center;">${item.quantity}</td>
-                  <td style="padding: 8px; border: 1px solid #dee2e6; text-align: right;">$${parseFloat(item.price.toString()).toFixed(2)}</td>
+                  <td style="padding: 8px; border: 1px solid #dee2e6; text-align: right;">$${parseFloat(item.price.toString()).toFixed(3)}</td>
                   <td style="padding: 8px; border: 1px solid #dee2e6; text-align: right;">$${parseFloat(item.total.toString()).toFixed(2)}</td>
                 </tr>
               `,
@@ -540,8 +540,8 @@ export class EmailService {
                   </td>
                   <td style="padding: 10px; border: 1px solid #dee2e6;">${item.product.id}</td>
                   <td style="padding: 10px; text-align: center; border: 1px solid #dee2e6;">${item.quantity}</td>
-                  <td style="padding: 10px; text-align: right; border: 1px solid #dee2e6;">$${parseFloat(item.price.toString()).toFixed(2)}</td>
-                  <td style="padding: 10px; text-align: right; border: 1px solid #dee2e6;">$${(parseFloat(item.price.toString()) * item.quantity).toFixed(2)}</td>
+                  <td style="padding: 10px; text-align: right; border: 1px solid #dee2e6;">$${parseFloat(item.price.toString()).toFixed(3)}</td>
+                  <td style="padding: 10px; text-align: right; border: 1px solid #dee2e6;">$${parseFloat(item.total.toString()).toFixed(2)}</td>
                 </tr>
               `,
                 )

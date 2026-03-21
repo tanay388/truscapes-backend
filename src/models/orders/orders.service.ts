@@ -381,7 +381,7 @@ export class OrdersService {
 
       // Unit Price
       doc.text(
-        `$${parseFloat(item.price.toString()).toFixed(2)}`,
+        `$${parseFloat(item.price.toString()).toFixed(3)}`,
         columns.price.x + 10,
         currentRowY + 20,
         {
@@ -395,7 +395,7 @@ export class OrdersService {
         .fontSize(12)
         .font('Helvetica-Bold')
         .text(
-          `$${(parseFloat(item.price.toString()) * item.quantity).toFixed(2)}`,
+          `$${parseFloat(item.total.toString()).toFixed(2)}`,
           columns.total.x + 10,
           currentRowY + 20,
           {
@@ -713,8 +713,8 @@ export class OrdersService {
           'Product Name': item?.product?.name || 'N/A',
           Variant: item?.variant?.name || 'N/A',
           Quantity: item?.quantity || 0,
-          Price: item?.price || 0,
-          'Item Total': item?.total || 0,
+          Price: item?.price ? Number(item.price).toFixed(3) : 0,
+          'Item Total': item?.total ? Number(item.total).toFixed(2) : 0,
           Subtotal: order?.subtotal || 0,
           'Shipping Cost': order?.shippingCost || 0,
           'Coupon Code': order?.couponCode || '',
@@ -765,14 +765,73 @@ export class OrdersService {
   }
 
   calculateShipping = (subtotal: number) => {
-    if (subtotal >= 0) {
-      return 0; // Free shipping for orders $2500 and above
+    if (subtotal >= 2500) {
+      return 0;
     }
-    const shippingCost = subtotal * 0.05; // 5% shipping for orders under $2500
+    const shippingCost = subtotal * 0.05;
     return Math.max(shippingCost, 10);
   };
 
-  getRoleBasedPrice(product: Product, variant: ProductVariant, user: User) {
+  private parseScaledInt(value: string | number, scale: number): number {
+    const str = String(value).trim();
+    if (!/^-?\d+(\.\d+)?$/.test(str)) {
+      throw new BadRequestException(`Invalid money value: ${str}`);
+    }
+
+    const negative = str.startsWith('-');
+    const unsigned = negative ? str.slice(1) : str;
+    const [intPart, fracPartRaw = ''] = unsigned.split('.');
+    const fracPart = fracPartRaw.replace(/[^0-9]/g, '');
+
+    const base = 10 ** scale;
+    const roundedDigits = fracPart.padEnd(scale + 1, '0');
+    const keep = roundedDigits.slice(0, scale);
+    const nextDigit = Number(roundedDigits.charAt(scale) || '0');
+
+    let scaled =
+      Number(intPart) * base + (keep.length ? Number(keep) : 0);
+    if (nextDigit >= 5) {
+      scaled += 1;
+    }
+
+    return negative ? -scaled : scaled;
+  }
+
+  private applyRatioRounded(value: number, numerator: number, denominator: number) {
+    const negative = value < 0;
+    const abs = Math.abs(value);
+    const scaled = abs * numerator;
+    const rounded = Math.floor((scaled + Math.floor(denominator / 2)) / denominator);
+    return negative ? -rounded : rounded;
+  }
+
+  private millsToMoneyString(mills: number) {
+    return (mills / 1000).toFixed(3);
+  }
+
+  private centsToMoneyString(cents: number) {
+    return (cents / 100).toFixed(2);
+  }
+
+  private millsToCentsRounded(mills: number) {
+    const negative = mills < 0;
+    const abs = Math.abs(mills);
+    const cents = Math.floor((abs + 5) / 10);
+    return negative ? -cents : cents;
+  }
+
+  private calculateShippingCents(subtotalCents: number) {
+    if (subtotalCents >= 250000) {
+      return 0;
+    }
+    const percentage = Math.floor((subtotalCents * 5 + 50) / 100);
+    return Math.max(percentage, 1000);
+  }
+
+  getRoleBasedPrice(product: Product, variant: ProductVariant | null, user: User) {
+    if (!variant) {
+      return product.basePrice;
+    }
     switch (user.role) {
       case UserRole.DEALER:
         return variant.dealerPrice;
@@ -798,8 +857,7 @@ export class OrdersService {
     order.notes = createOrderDto.notes;
     order.paymentOrder = createOrderDto.paymentOrder;
 
-    // Calculate totals
-    let subtotal = 0;
+    let subtotalCents = 0;
     const orderItems: OrderItem[] = [];
 
     // Process each order item
@@ -825,42 +883,44 @@ export class OrdersService {
         }
       }
 
-      let price = this.getRoleBasedPrice(product, variant, user);
-      const casePricePerQuantity = price * 0.95;
-      const caseSize = parseInt(product.caseSize.toString());
-
-      if (caseSize && product.allowCaseOrder) {
-        if (parseInt(item.quantity.toString()) % caseSize === 0) {
-          price = casePricePerQuantity;
-        }
+      const quantity = Number(item.quantity);
+      if (!Number.isFinite(quantity) || quantity <= 0) {
+        throw new BadRequestException('Invalid item quantity');
       }
 
-      console.log('userPrice' + ' ' + price);
-      const total =
-        parseFloat(price.toString()) * parseFloat(item.quantity.toString());
+      const basePrice = this.getRoleBasedPrice(product, variant, user);
+      let unitPriceMills = this.parseScaledInt(basePrice, 3);
+
+      const caseSize = Number(product.caseSize);
+      if (
+        Number.isFinite(caseSize) &&
+        caseSize > 0 &&
+        product.allowCaseOrder &&
+        quantity % caseSize === 0
+      ) {
+        unitPriceMills = this.applyRatioRounded(unitPriceMills, 95, 100);
+      }
+
+      const lineTotalCents = this.millsToCentsRounded(unitPriceMills * quantity);
 
       const orderItem = new OrderItem();
       orderItem.product = product;
       orderItem.variant = variant;
-      orderItem.quantity = item.quantity;
-      orderItem.price = price;
-      orderItem.total = total;
+      orderItem.quantity = quantity;
+      orderItem.price = this.millsToMoneyString(unitPriceMills);
+      orderItem.total = this.centsToMoneyString(lineTotalCents);
       orderItems.push(orderItem);
-
-      console.log('total' + ' ' + total);
-
-      subtotal += total;
+      subtotalCents += lineTotalCents;
     }
 
-    // Calculate shipping cost (you can implement your own logic)
-    let shippingCost = this.calculateShipping(subtotal); // Default shipping cost
+    let shippingCostCents = this.calculateShippingCents(subtotalCents);
 
     if (createOrderDto.shippingAddress.city === 'Store Collection') {
-      shippingCost = 0;
+      shippingCostCents = 0;
     }
 
     // Handle coupon application
-    let discountAmount = 0;
+    let discountCents = 0;
     let appliedCoupon = null;
     let couponCode = null;
 
@@ -868,7 +928,7 @@ export class OrdersService {
       const couponValidation = await this.couponsService.validateAndApplyCoupon(
         {
           couponCode: createOrderDto.couponCode,
-          orderAmount: subtotal,
+          orderAmount: Number(this.centsToMoneyString(subtotalCents)),
         },
         userId,
       );
@@ -877,26 +937,20 @@ export class OrdersService {
         throw new BadRequestException(couponValidation.message);
       }
 
-      discountAmount = couponValidation.discountAmount || 0;
+      discountCents = this.parseScaledInt(couponValidation.discountAmount || 0, 2);
       appliedCoupon = couponValidation.coupon;
       couponCode = createOrderDto.couponCode;
     }
-
-    console.log('subtotal' + ' ' + subtotal);
-    console.log('shippingCost' + ' ' + shippingCost);
-    console.log('discountAmount' + ' ' + discountAmount);
-    console.log('total' + ' ' + (subtotal + shippingCost - discountAmount));
+    const totalCents = subtotalCents + shippingCostCents - discountCents;
+    const totalAmount = Number(this.centsToMoneyString(totalCents));
 
     order.items = orderItems;
-    order.subtotal = subtotal;
-    order.shippingCost = shippingCost;
-    order.discountAmount = discountAmount;
+    order.subtotal = Number(this.centsToMoneyString(subtotalCents));
+    order.shippingCost = Number(this.centsToMoneyString(shippingCostCents));
+    order.discountAmount = Number(this.centsToMoneyString(discountCents));
     order.appliedCoupon = appliedCoupon;
     order.couponCode = couponCode;
-    order.total =
-      parseFloat(subtotal.toString()) +
-      parseFloat(shippingCost.toString()) -
-      parseFloat(discountAmount.toString());
+    order.total = totalAmount;
     order.status = OrderStatus.PAYMENT_PENDING;
     order.paymentStatus = PaymentStatus.PENDING;
 
@@ -904,7 +958,6 @@ export class OrdersService {
 
     if (createOrderDto.gateway === PaymentGateway.WALLET) {
       if (user.wallet.balance < order.total) {
-        console.log(user.wallet.balance, order.total);
         throw new BadRequestException('Insufficient wallet balance');
       }
 
@@ -918,13 +971,13 @@ export class OrdersService {
       await order.save();
 
       // Record coupon usage if coupon was applied
-      if (appliedCoupon && discountAmount > 0) {
+      if (appliedCoupon && discountCents > 0) {
         await this.couponsService.recordCouponUsage(
           appliedCoupon.id,
           userId,
           order.id.toString(),
-          discountAmount,
-          subtotal + shippingCost,
+          Number(this.centsToMoneyString(discountCents)),
+          Number(this.centsToMoneyString(subtotalCents + shippingCostCents)),
         );
       }
 
@@ -979,13 +1032,13 @@ export class OrdersService {
       await order.save();
 
       // Record coupon usage if coupon was applied
-      if (appliedCoupon && discountAmount > 0) {
+      if (appliedCoupon && discountCents > 0) {
         await this.couponsService.recordCouponUsage(
           appliedCoupon.id,
           userId,
           order.id.toString(),
-          discountAmount,
-          subtotal + shippingCost,
+          Number(this.centsToMoneyString(discountCents)),
+          Number(this.centsToMoneyString(subtotalCents + shippingCostCents)),
         );
       }
 
