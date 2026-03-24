@@ -821,6 +821,7 @@ export class OrdersService {
   }
 
   private calculateShippingCents(subtotalCents: number) {
+    return 0
     if (subtotalCents >= 250000) {
       return 0;
     }
