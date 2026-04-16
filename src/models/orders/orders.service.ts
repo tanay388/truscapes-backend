@@ -1293,7 +1293,7 @@ export class OrdersService {
     return order;
   }
 
-  @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
+  // @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
   async handlePaymentPendingOrders() {
     const orders = await Order.find({
       where: {
