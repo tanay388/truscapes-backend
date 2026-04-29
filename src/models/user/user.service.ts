@@ -298,6 +298,7 @@ export class UserService {
       lastName,
       ein,
       salesRep,
+      howYouHearAboutUs
     }: UpdateUserDto,
     photo?: Express.Multer.File,
     resaleFile?: Express.Multer.File,
@@ -317,32 +318,6 @@ export class UserService {
         'users/' + uid + '/resale',
       );
     }
-
-    console.log({
-      photo: path,
-      name,
-      gender,
-      birthDate,
-      email,
-      phone,
-      company,
-      city,
-      country,
-      companyAddress,
-      companyWebsite,
-      role,
-      zip,
-      additionalDetails,
-      lastName,
-      billingAddress,
-      billingCity,
-      billingState,
-      billingZipCode,
-      street,
-      salesRep,
-      ein,
-      taxExemptFormLink,
-    });
 
     await User.update(uid, {
       photo: path,
@@ -368,6 +343,7 @@ export class UserService {
       ein,
       salesRep,
       taxExemptFormLink: taxExemptFormLink,
+      howYouHearAboutUs,
     });
 
     return this.getProfile(fUser);

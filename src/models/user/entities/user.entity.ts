@@ -95,6 +95,9 @@ export class User extends BaseEntity {
   @Column({ nullable: true })
   companyAddress: string;
 
+  @Column({nullable: true})
+  howYouHearAboutUs: string;
+
   @Column({ nullable: true })
   birthDate: Date;
 

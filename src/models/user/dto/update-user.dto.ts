@@ -157,4 +157,12 @@ export class UpdateUserDto {
   @IsBoolean()
   @IsOptional()
   allowCredit?: boolean;
+
+  @ApiPropertyOptional({
+    description: "User's how you hear about us",
+    example: 'Facebook',
+  })
+  @IsString()
+  @IsOptional()
+  howYouHearAboutUs?: string;
 }
