@@ -48,14 +48,14 @@ async function bootstrap() {
     .setTitle('Social Chat Backend API')
     .setDescription('This is swagger backend to test APIs')
     .setVersion('1.0')
-    .addServer('http://localhost:3000', 'Local server')
+    .addServer('http://localhost:3031', 'Local server')
     .setExternalDoc('Postman Collection', '/api-json')
     .addBearerAuth()
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api', app, document, {});
-  const PORT = process.env.PORT ?? 3000;
+  const PORT = process.env.PORT ?? 3031;
   await app.listen(PORT, () => {
     console.log(`listening on http://localhost:${PORT}`);
   });
