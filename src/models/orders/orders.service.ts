@@ -640,32 +640,62 @@ export class OrdersService {
       size: 'A4',
       autoFirstPage: true,
     });
-    doc.on('error', (err) => { try { stream.destroy(err); } catch {} });
+    doc.on('error', (err) => {
+      try {
+        stream.destroy(err);
+      } catch {}
+    });
     doc.pipe(stream);
 
     const checkPageBreak = (requiredSpace: number) => {
-      if (doc.y + requiredSpace > doc.page.height - 60) { doc.addPage(); return true; }
+      if (doc.y + requiredSpace > doc.page.height - 60) {
+        doc.addPage();
+        return true;
+      }
       return false;
     };
 
     // ── Page header bar ───────────────────────────────────────────────────────
     doc.rect(40, 40, 515, 55).fill('#1e293b');
-    doc.fillColor('white').fontSize(22).font('Helvetica-Bold').text('TRU-SCAPES®', 55, 52);
-    doc.fontSize(10).font('Helvetica').fillColor('#94a3b8').text('Premium Landscaping Solutions', 55, 78);
-    doc.fontSize(22).font('Helvetica-Bold').fillColor('white').text('PACKING SLIP', 0, 52, { align: 'right', width: 540 });
-    doc.fontSize(10).font('Helvetica').fillColor('#94a3b8').text(`Order #${order.id}`, 0, 78, { align: 'right', width: 540 });
+    doc
+      .fillColor('white')
+      .fontSize(22)
+      .font('Helvetica-Bold')
+      .text('TRU-SCAPES®', 55, 52);
+    doc
+      .fontSize(10)
+      .font('Helvetica')
+      .fillColor('#94a3b8')
+      .text('Premium Landscaping Solutions', 55, 78);
+    doc
+      .fontSize(22)
+      .font('Helvetica-Bold')
+      .fillColor('white')
+      .text('PACKING SLIP', 0, 52, { align: 'right', width: 540 });
+    doc
+      .fontSize(10)
+      .font('Helvetica')
+      .fillColor('#94a3b8')
+      .text(`Order #${order.id}`, 0, 78, { align: 'right', width: 540 });
 
     // ── Order reference strip ─────────────────────────────────────────────────
     const refY = 105;
     doc.rect(40, refY, 515, 28).fill('#f1f5f9').stroke('#e2e8f0');
-    const orderDate = new Date(order.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+    const orderDate = new Date(order.createdAt).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    });
     const refParts = [
       `ORDER #${order.id}`,
       `DATE: ${orderDate}`,
       order.paymentOrder ? `PO: ${order.paymentOrder}` : null,
       `STATUS: ${order.status.replace(/_/g, ' ')}`,
     ].filter(Boolean);
-    doc.fillColor('#374151').fontSize(10).font('Helvetica-Bold')
+    doc
+      .fillColor('#374151')
+      .fontSize(10)
+      .font('Helvetica-Bold')
       .text(refParts.join('     |     '), 55, refY + 9, { width: 485 });
 
     // ── Shipping label box ────────────────────────────────────────────────────
@@ -677,42 +707,80 @@ export class OrdersService {
     // Outer border
     doc.lineWidth(2).rect(40, labelY, 515, labelH).stroke('#1e293b');
     // Divider between FROM and TO
-    doc.lineWidth(1.5).moveTo(40 + halfW, labelY).lineTo(40 + halfW, labelY + labelH).stroke('#1e293b');
+    doc
+      .lineWidth(1.5)
+      .moveTo(40 + halfW, labelY)
+      .lineTo(40 + halfW, labelY + labelH)
+      .stroke('#1e293b');
 
     // FROM ────────────────────────────────────────────────────────────────────
     doc.rect(40, labelY, halfW, 22).fill('#1e293b');
-    doc.fillColor('white').fontSize(9).font('Helvetica-Bold').text('FROM', 40 + pad, labelY + 7, { width: halfW - pad * 2 });
+    doc
+      .fillColor('white')
+      .fontSize(9)
+      .font('Helvetica-Bold')
+      .text('FROM', 40 + pad, labelY + 7, { width: halfW - pad * 2 });
 
     let fromY = labelY + 30;
-    doc.fillColor('#1e293b').fontSize(13).font('Helvetica-Bold').text('Tru-Scapes®', 40 + pad, fromY);
+    doc
+      .fillColor('#1e293b')
+      .fontSize(13)
+      .font('Helvetica-Bold')
+      .text('Tru-Scapes®', 40 + pad, fromY);
     fromY += 18;
-    doc.fontSize(10).font('Helvetica').fillColor('#475569').text('Premium Landscaping Solutions', 40 + pad, fromY, { width: halfW - pad * 2 });
+    doc
+      .fontSize(10)
+      .font('Helvetica')
+      .fillColor('#475569')
+      .text('Premium Landscaping Solutions', 40 + pad, fromY, {
+        width: halfW - pad * 2,
+      });
     fromY += 14;
-    doc.text('orders@tru-scapes.com', 40 + pad, fromY, { width: halfW - pad * 2 });
+    doc.text('orders@tru-scapes.com', 40 + pad, fromY, {
+      width: halfW - pad * 2,
+    });
     fromY += 14;
     doc.text('www.tru-scapes.com', 40 + pad, fromY, { width: halfW - pad * 2 });
 
     // TO ──────────────────────────────────────────────────────────────────────
     const toX = 40 + halfW;
-    doc.rect(toX, labelY, halfW + 8, 22).fill('#d97706');
-    doc.fillColor('white').fontSize(9).font('Helvetica-Bold').text('SHIP TO', toX + pad, labelY + 7, { width: halfW - pad });
+    doc.rect(toX, labelY, halfW + 8, 22).fill('#1e293b');
+    doc
+      .fillColor('white')
+      .fontSize(9)
+      .font('Helvetica-Bold')
+      .text('SHIP TO', toX + pad, labelY + 7, { width: halfW - pad });
 
     const a = order.shippingAddress;
     const u = order.user;
     let toY = labelY + 30;
 
-    doc.fillColor('#1e293b').fontSize(13).font('Helvetica-Bold').text(u.name, toX + pad, toY, { width: halfW - pad });
+    doc
+      .fillColor('#1e293b')
+      .fontSize(13)
+      .font('Helvetica-Bold')
+      .text(u.name, toX + pad, toY, { width: halfW - pad });
     toY += 18;
 
     if (u.company) {
-      doc.fontSize(10).font('Helvetica').fillColor('#475569').text(u.company, toX + pad, toY, { width: halfW - pad });
+      doc
+        .fontSize(10)
+        .font('Helvetica')
+        .fillColor('#475569')
+        .text(u.company, toX + pad, toY, { width: halfW - pad });
       toY += 14;
     }
 
     if (a) {
-      doc.fontSize(10).font('Helvetica').fillColor('#1e293b').text(a.street, toX + pad, toY, { width: halfW - pad });
+      doc
+        .fontSize(10)
+        .font('Helvetica')
+        .fillColor('#1e293b')
+        .text(a.street, toX + pad, toY, { width: halfW - pad });
       toY += 14;
-      doc.text(`${a.city}, ${a.state} ${a.zipCode}`, toX + pad, toY, { width: halfW - pad });
+      doc.text(`${a.city}, ${a.state} ${a.zipCode}`, toX + pad, toY, {
+        width: halfW - pad,
+      });
       toY += 14;
       if (a.country) {
         doc.text(a.country, toX + pad, toY, { width: halfW - pad });
@@ -722,18 +790,30 @@ export class OrdersService {
 
     const phone = a?.phone || u.phone;
     if (phone) {
-      doc.fontSize(10).font('Helvetica-Bold').fillColor('#1e293b').text(`Tel: ${phone}`, toX + pad, toY, { width: halfW - pad });
+      doc
+        .fontSize(10)
+        .font('Helvetica-Bold')
+        .fillColor('#1e293b')
+        .text(`Tel: ${phone}`, toX + pad, toY, { width: halfW - pad });
       toY += 14;
     }
     if (u.email) {
-      doc.fontSize(10).font('Helvetica').fillColor('#475569').text(u.email, toX + pad, toY, { width: halfW - pad });
+      doc
+        .fontSize(10)
+        .font('Helvetica')
+        .fillColor('#475569')
+        .text(u.email, toX + pad, toY, { width: halfW - pad });
     }
 
     doc.y = labelY + labelH + 25;
 
     // ── Items table ───────────────────────────────────────────────────────────
     checkPageBreak(200);
-    doc.fillColor('#1e293b').fontSize(14).font('Helvetica-Bold').text('Items', 40, doc.y);
+    doc
+      .fillColor('#1e293b')
+      .fontSize(14)
+      .font('Helvetica-Bold')
+      .text('Items', 40, doc.y);
     doc.y += 20;
 
     const tableStartY = doc.y;
@@ -742,12 +822,15 @@ export class OrdersService {
 
     const columns = {
       product: { width: 330, x: 40 },
-      sku:     { width: 120, x: 370 },
-      qty:     { width: 65,  x: 490 },
+      sku: { width: 120, x: 370 },
+      qty: { width: 65, x: 490 },
     };
 
     doc.rect(40, tableStartY, tableWidth, 36).fill('#f1f5f9').stroke('#e2e8f0');
-    doc.fillColor('#374151').fontSize(11).font('Helvetica-Bold')
+    doc
+      .fillColor('#374151')
+      .fontSize(11)
+      .font('Helvetica-Bold')
       .text('Product', columns.product.x + 10, tableStartY + 13)
       .text('SKU', columns.sku.x + 10, tableStartY + 13)
       .text('Qty', columns.qty.x + 5, tableStartY + 13);
@@ -758,8 +841,14 @@ export class OrdersService {
       const pageBreakOccurred = checkPageBreak(rowHeight + 20);
       if (pageBreakOccurred) {
         currentRowY = doc.y;
-        doc.rect(40, currentRowY, tableWidth, 36).fill('#f1f5f9').stroke('#e2e8f0');
-        doc.fillColor('#374151').fontSize(11).font('Helvetica-Bold')
+        doc
+          .rect(40, currentRowY, tableWidth, 36)
+          .fill('#f1f5f9')
+          .stroke('#e2e8f0');
+        doc
+          .fillColor('#374151')
+          .fontSize(11)
+          .font('Helvetica-Bold')
           .text('Product', columns.product.x + 10, currentRowY + 13)
           .text('SKU', columns.sku.x + 10, currentRowY + 13)
           .text('Qty', columns.qty.x + 5, currentRowY + 13);
@@ -767,18 +856,40 @@ export class OrdersService {
       }
 
       const rowColor = index % 2 === 0 ? '#ffffff' : '#f8fafc';
-      doc.rect(40, currentRowY, tableWidth, rowHeight).fill(rowColor).stroke('#e2e8f0');
+      doc
+        .rect(40, currentRowY, tableWidth, rowHeight)
+        .fill(rowColor)
+        .stroke('#e2e8f0');
 
-      const itemName = item.variant ? `${item.product.name} (${item.variant.name})` : item.product.name;
-      doc.fillColor('#1e293b').fontSize(11).font('Helvetica-Bold')
-        .text(itemName, columns.product.x + 10, currentRowY + 10, { width: columns.product.width - 20, lineGap: 2 });
+      const itemName = item.variant
+        ? `${item.product.name} (${item.variant.name})`
+        : item.product.name;
+      doc
+        .fillColor('#1e293b')
+        .fontSize(11)
+        .font('Helvetica-Bold')
+        .text(itemName, columns.product.x + 10, currentRowY + 10, {
+          width: columns.product.width - 20,
+          lineGap: 2,
+        });
 
       const sku = item.variant?.sku || `P-${item.product.id}`;
-      doc.fontSize(10).font('Helvetica').fillColor('#6b7280')
-        .text(sku, columns.sku.x + 10, currentRowY + 18, { width: columns.sku.width - 20 });
+      doc
+        .fontSize(10)
+        .font('Helvetica')
+        .fillColor('#6b7280')
+        .text(sku, columns.sku.x + 10, currentRowY + 18, {
+          width: columns.sku.width - 20,
+        });
 
-      doc.fillColor('#1e293b').fontSize(13).font('Helvetica-Bold')
-        .text(item.quantity.toString(), columns.qty.x + 5, currentRowY + 16, { align: 'center', width: columns.qty.width - 10 });
+      doc
+        .fillColor('#1e293b')
+        .fontSize(13)
+        .font('Helvetica-Bold')
+        .text(item.quantity.toString(), columns.qty.x + 5, currentRowY + 16, {
+          align: 'center',
+          width: columns.qty.width - 10,
+        });
 
       currentRowY += rowHeight;
     });
@@ -788,17 +899,37 @@ export class OrdersService {
     // ── Notes ─────────────────────────────────────────────────────────────────
     if (order.notes) {
       checkPageBreak(60);
-      doc.fillColor('#1e293b').fontSize(12).font('Helvetica-Bold').text('Notes', 40, doc.y);
-      doc.fontSize(10).font('Helvetica').fillColor('#475569')
+      doc
+        .fillColor('#1e293b')
+        .fontSize(12)
+        .font('Helvetica-Bold')
+        .text('Notes', 40, doc.y);
+      doc
+        .fontSize(10)
+        .font('Helvetica')
+        .fillColor('#475569')
         .text(order.notes, 40, doc.y + 14, { width: 515, lineGap: 3 });
       doc.y += 45;
     }
 
     // ── Footer ────────────────────────────────────────────────────────────────
     const footerY = doc.y + 10;
-    doc.lineWidth(0.5).strokeColor('#e2e8f0').moveTo(40, footerY).lineTo(555, footerY).stroke();
-    doc.fillColor('#6b7280').fontSize(9).font('Helvetica')
-      .text('Tru-Scapes® — Thank you for your order!   |   questions@tru-scapes.com', 40, footerY + 12, { align: 'center', width: 515 });
+    doc
+      .lineWidth(0.5)
+      .strokeColor('#e2e8f0')
+      .moveTo(40, footerY)
+      .lineTo(555, footerY)
+      .stroke();
+    doc
+      .fillColor('#6b7280')
+      .fontSize(9)
+      .font('Helvetica')
+      .text(
+        'Tru-Scapes® — Thank you for your order!   |   questions@tru-scapes.com',
+        40,
+        footerY + 12,
+        { align: 'center', width: 515 },
+      );
 
     doc.end();
     return { stream, filename: `packing-slip-${order.id}.pdf` };
@@ -972,8 +1103,7 @@ export class OrdersService {
     const keep = roundedDigits.slice(0, scale);
     const nextDigit = Number(roundedDigits.charAt(scale) || '0');
 
-    let scaled =
-      Number(intPart) * base + (keep.length ? Number(keep) : 0);
+    let scaled = Number(intPart) * base + (keep.length ? Number(keep) : 0);
     if (nextDigit >= 5) {
       scaled += 1;
     }
@@ -981,11 +1111,17 @@ export class OrdersService {
     return negative ? -scaled : scaled;
   }
 
-  private applyRatioRounded(value: number, numerator: number, denominator: number) {
+  private applyRatioRounded(
+    value: number,
+    numerator: number,
+    denominator: number,
+  ) {
     const negative = value < 0;
     const abs = Math.abs(value);
     const scaled = abs * numerator;
-    const rounded = Math.floor((scaled + Math.floor(denominator / 2)) / denominator);
+    const rounded = Math.floor(
+      (scaled + Math.floor(denominator / 2)) / denominator,
+    );
     return negative ? -rounded : rounded;
   }
 
@@ -1005,7 +1141,7 @@ export class OrdersService {
   }
 
   private calculateShippingCents(subtotalCents: number) {
-    return 0
+    return 0;
     if (subtotalCents >= 250000) {
       return 0;
     }
@@ -1013,7 +1149,11 @@ export class OrdersService {
     return Math.max(percentage, 1000);
   }
 
-  getRoleBasedPrice(product: Product, variant: ProductVariant | null, user: User) {
+  getRoleBasedPrice(
+    product: Product,
+    variant: ProductVariant | null,
+    user: User,
+  ) {
     if (!variant) {
       return product.basePrice;
     }
@@ -1086,7 +1226,9 @@ export class OrdersService {
         unitPriceMills = this.applyRatioRounded(unitPriceMills, 95, 100);
       }
 
-      const lineTotalCents = this.millsToCentsRounded(unitPriceMills * quantity);
+      const lineTotalCents = this.millsToCentsRounded(
+        unitPriceMills * quantity,
+      );
 
       const orderItem = new OrderItem();
       orderItem.product = product;
@@ -1122,7 +1264,10 @@ export class OrdersService {
         throw new BadRequestException(couponValidation.message);
       }
 
-      discountCents = this.parseScaledInt(couponValidation.discountAmount || 0, 2);
+      discountCents = this.parseScaledInt(
+        couponValidation.discountAmount || 0,
+        2,
+      );
       appliedCoupon = couponValidation.coupon;
       couponCode = createOrderDto.couponCode;
     }
