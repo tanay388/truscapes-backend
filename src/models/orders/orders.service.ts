@@ -620,6 +620,174 @@ export class OrdersService {
     return { stream, filename: `order-${order.id}.pdf` };
   }
 
+  async generatePackingSlip(orderId: number) {
+    const order = await Order.getRepository()
+      .createQueryBuilder('order')
+      .leftJoinAndSelect('order.user', 'user')
+      .leftJoinAndSelect('order.items', 'items')
+      .leftJoinAndSelect('items.product', 'product')
+      .leftJoinAndSelect('items.variant', 'variant')
+      .where('order.id = :id', { id: orderId })
+      .getOne();
+
+    if (!order) {
+      throw new NotFoundException('Order not found');
+    }
+
+    const stream = new PassThrough();
+    const doc = new PDFDocument({
+      margins: { top: 40, bottom: 40, left: 40, right: 40 },
+      size: 'A4',
+      autoFirstPage: true,
+    });
+    doc.on('error', (err) => { try { stream.destroy(err); } catch {} });
+    doc.pipe(stream);
+
+    const wrapText = (text: string, maxWidth: number, fontSize: number = 10) => {
+      doc.fontSize(fontSize);
+      const words = text.split(' ');
+      const lines: string[] = [];
+      let currentLine = '';
+      for (const word of words) {
+        const testLine = currentLine ? `${currentLine} ${word}` : word;
+        if (doc.widthOfString(testLine) <= maxWidth) {
+          currentLine = testLine;
+        } else {
+          if (currentLine) { lines.push(currentLine); currentLine = word; }
+          else { lines.push(word); }
+        }
+      }
+      if (currentLine) lines.push(currentLine);
+      return lines;
+    };
+
+    const checkPageBreak = (requiredSpace: number) => {
+      if (doc.y + requiredSpace > doc.page.height - 60) { doc.addPage(); return true; }
+      return false;
+    };
+
+    // Header
+    doc.rect(40, 40, 515, 80).fill('#d97706').stroke();
+    doc.fillColor('white').fontSize(28).font('Helvetica-Bold').text('Tru-Scapes', 60, 65);
+    doc.fontSize(12).font('Helvetica').text('Premium Landscaping Solutions', 60, 95);
+    doc.fontSize(24).font('Helvetica-Bold').text('PACKING SLIP', 380, 65, { align: 'right' });
+    doc.fontSize(12).font('Helvetica').text(`#${order.id}`, 380, 95, { align: 'right' });
+    doc.y = 140;
+    doc.fillColor('black');
+
+    // Order Details + Customer Cards
+    const cardY = doc.y;
+    const cardHeight = 100;
+    const cardWidth = 240;
+
+    doc.rect(40, cardY, cardWidth, cardHeight).fill('#f8fafc').stroke('#e2e8f0');
+    doc.fillColor('#1e293b').fontSize(14).font('Helvetica-Bold').text('Order Details', 55, cardY + 15);
+    doc.fontSize(11).font('Helvetica').fillColor('#475569')
+      .text('Order Date:', 55, cardY + 35)
+      .fillColor('#1e293b')
+      .text(new Date(order.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }), 55, cardY + 50)
+      .fillColor('#475569').text('Status:', 55, cardY + 65)
+      .fillColor('#059669').font('Helvetica-Bold').text(order.status.replace('_', ' ').toUpperCase(), 55, cardY + 80);
+
+    doc.rect(300, cardY, cardWidth, cardHeight).fill('#f8fafc').stroke('#e2e8f0');
+    doc.fillColor('#1e293b').fontSize(14).font('Helvetica-Bold').text('Ship To', 315, cardY + 15);
+    doc.fontSize(11).font('Helvetica').fillColor('#1e293b').text(order.user.name, 315, cardY + 35);
+    if (order.shippingAddress) {
+      const a = order.shippingAddress;
+      doc.fillColor('#475569')
+        .text(a.street, 315, cardY + 50, { width: cardWidth - 30 })
+        .text(`${a.city}, ${a.state} ${a.zipCode}`, 315, cardY + 65, { width: cardWidth - 30 })
+        .text(a.country, 315, cardY + 80);
+    }
+
+    doc.y = cardY + cardHeight + 30;
+
+    if (order.paymentOrder) {
+      doc.fillColor('#475569').fontSize(11).font('Helvetica')
+        .text(`Purchase Order: ${order.paymentOrder}`, 40, doc.y);
+      doc.y += 20;
+    }
+
+    // Items Table (no pricing)
+    checkPageBreak(200);
+    doc.fillColor('#1e293b').fontSize(16).font('Helvetica-Bold').text('Items', 40, doc.y);
+    doc.y += 25;
+
+    const tableStartY = doc.y;
+    const tableWidth = 515;
+    const rowHeight = 50;
+
+    const columns = {
+      product: { width: 330, x: 40 },
+      sku:     { width: 120, x: 370 },
+      qty:     { width: 65,  x: 490 },
+    };
+
+    doc.rect(40, tableStartY, tableWidth, 40).fill('#f1f5f9').stroke('#e2e8f0');
+    doc.fillColor('#374151').fontSize(12).font('Helvetica-Bold')
+      .text('Product', columns.product.x + 10, tableStartY + 15)
+      .text('SKU', columns.sku.x + 10, tableStartY + 15)
+      .text('Qty', columns.qty.x + 5, tableStartY + 15);
+
+    let currentRowY = tableStartY + 40;
+
+    order.items.forEach((item, index) => {
+      const pageBreakOccurred = checkPageBreak(rowHeight + 20);
+      if (pageBreakOccurred) {
+        currentRowY = doc.y;
+        doc.rect(40, currentRowY, tableWidth, 40).fill('#f1f5f9').stroke('#e2e8f0');
+        doc.fillColor('#374151').fontSize(12).font('Helvetica-Bold')
+          .text('Product', columns.product.x + 10, currentRowY + 15)
+          .text('SKU', columns.sku.x + 10, currentRowY + 15)
+          .text('Qty', columns.qty.x + 5, currentRowY + 15);
+        currentRowY += 40;
+      }
+
+      const rowColor = index % 2 === 0 ? '#ffffff' : '#f8fafc';
+      doc.rect(40, currentRowY, tableWidth, rowHeight).fill(rowColor).stroke('#e2e8f0');
+
+      const itemName = item.variant ? `${item.product.name} (${item.variant.name})` : item.product.name;
+      const productLines = wrapText(itemName, columns.product.width - 20, 11);
+      const textY = currentRowY + 10;
+
+      doc.fillColor('#1e293b').fontSize(11).font('Helvetica-Bold');
+      productLines.slice(0, 2).forEach((line, i) => {
+        doc.text(line, columns.product.x + 10, textY + i * 12);
+      });
+
+      const sku = item.variant?.sku || `P-${item.product.id}`;
+      doc.fontSize(11).font('Helvetica').fillColor('#475569')
+        .text(sku, columns.sku.x + 10, currentRowY + 20, { width: columns.sku.width - 20 });
+
+      doc.fillColor('#1e293b').fontSize(12).font('Helvetica')
+        .text(item.quantity.toString(), columns.qty.x + 5, currentRowY + 20, { align: 'center', width: columns.qty.width - 10 });
+
+      currentRowY += rowHeight;
+    });
+
+    doc.y = currentRowY + 30;
+
+    // Notes
+    if (order.notes) {
+      checkPageBreak(60);
+      doc.fillColor('#1e293b').fontSize(14).font('Helvetica-Bold').text('Notes', 40, doc.y);
+      doc.fontSize(11).font('Helvetica').fillColor('#475569')
+        .text(order.notes, 40, doc.y + 15, { width: 515, lineGap: 3 });
+      doc.y += 50;
+    }
+
+    // Footer
+    const footerY = doc.y + 10;
+    doc.lineWidth(0.5).strokeColor('#e2e8f0').moveTo(40, footerY).lineTo(555, footerY).stroke();
+    doc.fillColor('#6b7280').fontSize(10).font('Helvetica')
+      .text('Tru-Scapes® — Thank you for your order!', 40, footerY + 15)
+      .text('questions@tru-scapes.com', 40, footerY + 30);
+
+    doc.end();
+
+    return { stream, filename: `packing-slip-${order.id}.pdf` };
+  }
+
   async exportOrdersToExcel(filter: OrderFilterDto) {
     try {
       const queryBuilder = Order.createQueryBuilder('order')

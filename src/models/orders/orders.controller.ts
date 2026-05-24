@@ -109,6 +109,21 @@ export class OrdersController {
     return new StreamableFile(stream);
   }
 
+  @Get(':id/packing-slip')
+  @ApiOperation({ summary: 'Get packing slip PDF for an order' })
+  async getPackingSlip(
+    @Param('id', ParseIntPipe) id: number,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const { stream, filename } = await this.ordersService.generatePackingSlip(id);
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename=${filename}`,
+      'Cache-Control': 'no-store',
+    });
+    return new StreamableFile(stream);
+  }
+
   @Patch(':id')
   @AdminOnly()
   @ApiOperation({ summary: 'Update order status (Admin only)' })
