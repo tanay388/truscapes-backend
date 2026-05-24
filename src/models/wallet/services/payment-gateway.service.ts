@@ -324,6 +324,9 @@ export class PaymentGatewayService {
           if (!order) {
             throw new NotFoundException('Order not found');
           }
+          if (order.paymentStatus === PaymentStatus.COMPLETED) {
+            return { success: true, requiresAction: false };
+          }
           order.paymentStatus = PaymentStatus.COMPLETED;
           order.status = OrderStatus.CONFIRMED;
           order.paymentIntentId = sessionId;
