@@ -643,75 +643,98 @@ export class OrdersService {
     doc.on('error', (err) => { try { stream.destroy(err); } catch {} });
     doc.pipe(stream);
 
-    const wrapText = (text: string, maxWidth: number, fontSize: number = 10) => {
-      doc.fontSize(fontSize);
-      const words = text.split(' ');
-      const lines: string[] = [];
-      let currentLine = '';
-      for (const word of words) {
-        const testLine = currentLine ? `${currentLine} ${word}` : word;
-        if (doc.widthOfString(testLine) <= maxWidth) {
-          currentLine = testLine;
-        } else {
-          if (currentLine) { lines.push(currentLine); currentLine = word; }
-          else { lines.push(word); }
-        }
-      }
-      if (currentLine) lines.push(currentLine);
-      return lines;
-    };
-
     const checkPageBreak = (requiredSpace: number) => {
       if (doc.y + requiredSpace > doc.page.height - 60) { doc.addPage(); return true; }
       return false;
     };
 
-    // Header
-    doc.rect(40, 40, 515, 80).fill('#d97706').stroke();
-    doc.fillColor('white').fontSize(28).font('Helvetica-Bold').text('Tru-Scapes', 60, 65);
-    doc.fontSize(12).font('Helvetica').text('Premium Landscaping Solutions', 60, 95);
-    doc.fontSize(24).font('Helvetica-Bold').text('PACKING SLIP', 380, 65, { align: 'right' });
-    doc.fontSize(12).font('Helvetica').text(`#${order.id}`, 380, 95, { align: 'right' });
-    doc.y = 140;
-    doc.fillColor('black');
+    // ── Page header bar ───────────────────────────────────────────────────────
+    doc.rect(40, 40, 515, 55).fill('#1e293b');
+    doc.fillColor('white').fontSize(22).font('Helvetica-Bold').text('TRU-SCAPES®', 55, 52);
+    doc.fontSize(10).font('Helvetica').fillColor('#94a3b8').text('Premium Landscaping Solutions', 55, 78);
+    doc.fontSize(22).font('Helvetica-Bold').fillColor('white').text('PACKING SLIP', 0, 52, { align: 'right', width: 540 });
+    doc.fontSize(10).font('Helvetica').fillColor('#94a3b8').text(`Order #${order.id}`, 0, 78, { align: 'right', width: 540 });
 
-    // Order Details + Customer Cards
-    const cardY = doc.y;
-    const cardHeight = 100;
-    const cardWidth = 240;
+    // ── Order reference strip ─────────────────────────────────────────────────
+    const refY = 105;
+    doc.rect(40, refY, 515, 28).fill('#f1f5f9').stroke('#e2e8f0');
+    const orderDate = new Date(order.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+    const refParts = [
+      `ORDER #${order.id}`,
+      `DATE: ${orderDate}`,
+      order.paymentOrder ? `PO: ${order.paymentOrder}` : null,
+      `STATUS: ${order.status.replace(/_/g, ' ')}`,
+    ].filter(Boolean);
+    doc.fillColor('#374151').fontSize(10).font('Helvetica-Bold')
+      .text(refParts.join('     |     '), 55, refY + 9, { width: 485 });
 
-    doc.rect(40, cardY, cardWidth, cardHeight).fill('#f8fafc').stroke('#e2e8f0');
-    doc.fillColor('#1e293b').fontSize(14).font('Helvetica-Bold').text('Order Details', 55, cardY + 15);
-    doc.fontSize(11).font('Helvetica').fillColor('#475569')
-      .text('Order Date:', 55, cardY + 35)
-      .fillColor('#1e293b')
-      .text(new Date(order.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }), 55, cardY + 50)
-      .fillColor('#475569').text('Status:', 55, cardY + 65)
-      .fillColor('#059669').font('Helvetica-Bold').text(order.status.replace('_', ' ').toUpperCase(), 55, cardY + 80);
+    // ── Shipping label box ────────────────────────────────────────────────────
+    const labelY = 143;
+    const labelH = 175;
+    const halfW = 247;
+    const pad = 14;
 
-    doc.rect(300, cardY, cardWidth, cardHeight).fill('#f8fafc').stroke('#e2e8f0');
-    doc.fillColor('#1e293b').fontSize(14).font('Helvetica-Bold').text('Ship To', 315, cardY + 15);
-    doc.fontSize(11).font('Helvetica').fillColor('#1e293b').text(order.user.name, 315, cardY + 35);
-    if (order.shippingAddress) {
-      const a = order.shippingAddress;
-      doc.fillColor('#475569')
-        .text(a.street, 315, cardY + 50, { width: cardWidth - 30 })
-        .text(`${a.city}, ${a.state} ${a.zipCode}`, 315, cardY + 65, { width: cardWidth - 30 })
-        .text(a.country, 315, cardY + 80);
+    // Outer border
+    doc.lineWidth(2).rect(40, labelY, 515, labelH).stroke('#1e293b');
+    // Divider between FROM and TO
+    doc.lineWidth(1.5).moveTo(40 + halfW, labelY).lineTo(40 + halfW, labelY + labelH).stroke('#1e293b');
+
+    // FROM ────────────────────────────────────────────────────────────────────
+    doc.rect(40, labelY, halfW, 22).fill('#1e293b');
+    doc.fillColor('white').fontSize(9).font('Helvetica-Bold').text('FROM', 40 + pad, labelY + 7, { width: halfW - pad * 2 });
+
+    let fromY = labelY + 30;
+    doc.fillColor('#1e293b').fontSize(13).font('Helvetica-Bold').text('Tru-Scapes®', 40 + pad, fromY);
+    fromY += 18;
+    doc.fontSize(10).font('Helvetica').fillColor('#475569').text('Premium Landscaping Solutions', 40 + pad, fromY, { width: halfW - pad * 2 });
+    fromY += 14;
+    doc.text('orders@tru-scapes.com', 40 + pad, fromY, { width: halfW - pad * 2 });
+    fromY += 14;
+    doc.text('www.tru-scapes.com', 40 + pad, fromY, { width: halfW - pad * 2 });
+
+    // TO ──────────────────────────────────────────────────────────────────────
+    const toX = 40 + halfW;
+    doc.rect(toX, labelY, halfW + 8, 22).fill('#d97706');
+    doc.fillColor('white').fontSize(9).font('Helvetica-Bold').text('SHIP TO', toX + pad, labelY + 7, { width: halfW - pad });
+
+    const a = order.shippingAddress;
+    const u = order.user;
+    let toY = labelY + 30;
+
+    doc.fillColor('#1e293b').fontSize(13).font('Helvetica-Bold').text(u.name, toX + pad, toY, { width: halfW - pad });
+    toY += 18;
+
+    if (u.company) {
+      doc.fontSize(10).font('Helvetica').fillColor('#475569').text(u.company, toX + pad, toY, { width: halfW - pad });
+      toY += 14;
     }
 
-    doc.y = cardY + cardHeight + 30;
-
-    if (order.paymentOrder) {
-      doc.fillColor('#475569').fontSize(11).font('Helvetica')
-        .text(`Purchase Order: ${order.paymentOrder}`, 40, doc.y);
-      doc.y += 20;
+    if (a) {
+      doc.fontSize(10).font('Helvetica').fillColor('#1e293b').text(a.street, toX + pad, toY, { width: halfW - pad });
+      toY += 14;
+      doc.text(`${a.city}, ${a.state} ${a.zipCode}`, toX + pad, toY, { width: halfW - pad });
+      toY += 14;
+      if (a.country) {
+        doc.text(a.country, toX + pad, toY, { width: halfW - pad });
+        toY += 14;
+      }
     }
 
-    // Items Table (no pricing)
+    const phone = a?.phone || u.phone;
+    if (phone) {
+      doc.fontSize(10).font('Helvetica-Bold').fillColor('#1e293b').text(`Tel: ${phone}`, toX + pad, toY, { width: halfW - pad });
+      toY += 14;
+    }
+    if (u.email) {
+      doc.fontSize(10).font('Helvetica').fillColor('#475569').text(u.email, toX + pad, toY, { width: halfW - pad });
+    }
+
+    doc.y = labelY + labelH + 25;
+
+    // ── Items table ───────────────────────────────────────────────────────────
     checkPageBreak(200);
-    doc.fillColor('#1e293b').fontSize(16).font('Helvetica-Bold').text('Items', 40, doc.y);
-    doc.y += 25;
+    doc.fillColor('#1e293b').fontSize(14).font('Helvetica-Bold').text('Items', 40, doc.y);
+    doc.y += 20;
 
     const tableStartY = doc.y;
     const tableWidth = 515;
@@ -723,68 +746,61 @@ export class OrdersService {
       qty:     { width: 65,  x: 490 },
     };
 
-    doc.rect(40, tableStartY, tableWidth, 40).fill('#f1f5f9').stroke('#e2e8f0');
-    doc.fillColor('#374151').fontSize(12).font('Helvetica-Bold')
-      .text('Product', columns.product.x + 10, tableStartY + 15)
-      .text('SKU', columns.sku.x + 10, tableStartY + 15)
-      .text('Qty', columns.qty.x + 5, tableStartY + 15);
+    doc.rect(40, tableStartY, tableWidth, 36).fill('#f1f5f9').stroke('#e2e8f0');
+    doc.fillColor('#374151').fontSize(11).font('Helvetica-Bold')
+      .text('Product', columns.product.x + 10, tableStartY + 13)
+      .text('SKU', columns.sku.x + 10, tableStartY + 13)
+      .text('Qty', columns.qty.x + 5, tableStartY + 13);
 
-    let currentRowY = tableStartY + 40;
+    let currentRowY = tableStartY + 36;
 
     order.items.forEach((item, index) => {
       const pageBreakOccurred = checkPageBreak(rowHeight + 20);
       if (pageBreakOccurred) {
         currentRowY = doc.y;
-        doc.rect(40, currentRowY, tableWidth, 40).fill('#f1f5f9').stroke('#e2e8f0');
-        doc.fillColor('#374151').fontSize(12).font('Helvetica-Bold')
-          .text('Product', columns.product.x + 10, currentRowY + 15)
-          .text('SKU', columns.sku.x + 10, currentRowY + 15)
-          .text('Qty', columns.qty.x + 5, currentRowY + 15);
-        currentRowY += 40;
+        doc.rect(40, currentRowY, tableWidth, 36).fill('#f1f5f9').stroke('#e2e8f0');
+        doc.fillColor('#374151').fontSize(11).font('Helvetica-Bold')
+          .text('Product', columns.product.x + 10, currentRowY + 13)
+          .text('SKU', columns.sku.x + 10, currentRowY + 13)
+          .text('Qty', columns.qty.x + 5, currentRowY + 13);
+        currentRowY += 36;
       }
 
       const rowColor = index % 2 === 0 ? '#ffffff' : '#f8fafc';
       doc.rect(40, currentRowY, tableWidth, rowHeight).fill(rowColor).stroke('#e2e8f0');
 
       const itemName = item.variant ? `${item.product.name} (${item.variant.name})` : item.product.name;
-      const productLines = wrapText(itemName, columns.product.width - 20, 11);
-      const textY = currentRowY + 10;
-
-      doc.fillColor('#1e293b').fontSize(11).font('Helvetica-Bold');
-      productLines.slice(0, 2).forEach((line, i) => {
-        doc.text(line, columns.product.x + 10, textY + i * 12);
-      });
+      doc.fillColor('#1e293b').fontSize(11).font('Helvetica-Bold')
+        .text(itemName, columns.product.x + 10, currentRowY + 10, { width: columns.product.width - 20, lineGap: 2 });
 
       const sku = item.variant?.sku || `P-${item.product.id}`;
-      doc.fontSize(11).font('Helvetica').fillColor('#475569')
-        .text(sku, columns.sku.x + 10, currentRowY + 20, { width: columns.sku.width - 20 });
+      doc.fontSize(10).font('Helvetica').fillColor('#6b7280')
+        .text(sku, columns.sku.x + 10, currentRowY + 18, { width: columns.sku.width - 20 });
 
-      doc.fillColor('#1e293b').fontSize(12).font('Helvetica')
-        .text(item.quantity.toString(), columns.qty.x + 5, currentRowY + 20, { align: 'center', width: columns.qty.width - 10 });
+      doc.fillColor('#1e293b').fontSize(13).font('Helvetica-Bold')
+        .text(item.quantity.toString(), columns.qty.x + 5, currentRowY + 16, { align: 'center', width: columns.qty.width - 10 });
 
       currentRowY += rowHeight;
     });
 
-    doc.y = currentRowY + 30;
+    doc.y = currentRowY + 25;
 
-    // Notes
+    // ── Notes ─────────────────────────────────────────────────────────────────
     if (order.notes) {
       checkPageBreak(60);
-      doc.fillColor('#1e293b').fontSize(14).font('Helvetica-Bold').text('Notes', 40, doc.y);
-      doc.fontSize(11).font('Helvetica').fillColor('#475569')
-        .text(order.notes, 40, doc.y + 15, { width: 515, lineGap: 3 });
-      doc.y += 50;
+      doc.fillColor('#1e293b').fontSize(12).font('Helvetica-Bold').text('Notes', 40, doc.y);
+      doc.fontSize(10).font('Helvetica').fillColor('#475569')
+        .text(order.notes, 40, doc.y + 14, { width: 515, lineGap: 3 });
+      doc.y += 45;
     }
 
-    // Footer
+    // ── Footer ────────────────────────────────────────────────────────────────
     const footerY = doc.y + 10;
     doc.lineWidth(0.5).strokeColor('#e2e8f0').moveTo(40, footerY).lineTo(555, footerY).stroke();
-    doc.fillColor('#6b7280').fontSize(10).font('Helvetica')
-      .text('Tru-Scapes® — Thank you for your order!', 40, footerY + 15)
-      .text('questions@tru-scapes.com', 40, footerY + 30);
+    doc.fillColor('#6b7280').fontSize(9).font('Helvetica')
+      .text('Tru-Scapes® — Thank you for your order!   |   questions@tru-scapes.com', 40, footerY + 12, { align: 'center', width: 515 });
 
     doc.end();
-
     return { stream, filename: `packing-slip-${order.id}.pdf` };
   }
 
