@@ -335,6 +335,7 @@ export class EmailService {
             <p><strong>Order Date:</strong> ${new Date(orderDetails.createdAt).toLocaleDateString()}</p>
             <p><strong>Order Status:</strong> ${orderDetails.status}</p>
             <p><strong>Purchase Order:</strong> ${orderDetails.paymentOrder || 'N/A'}</p>
+            <p><strong>Payment Method:</strong> ${orderDetails.paymentIntentId === 'wallet' ? 'Wallet' : (orderDetails.cardDetail || 'Card')}</p>
             <p><strong>Shipping Cost:</strong> $${parseFloat(orderDetails.shippingCost.toString()).toFixed(2)}</p>
           </div>
 
@@ -413,6 +414,7 @@ export class EmailService {
             <p><strong>Order Date:</strong> ${new Date(orderDetails.createdAt).toLocaleString()}</p>
             <p><strong>Order Status:</strong> ${orderDetails.status}</p>
             <p><strong>Purchase Order:</strong> ${orderDetails.paymentOrder || 'N/A'}</p>
+            <p><strong>Payment Method:</strong> ${orderDetails.paymentIntentId === 'wallet' ? 'Wallet' : (orderDetails.cardDetail || 'Card')}</p>
             <p><strong>Shipping Cost:</strong> $${parseFloat(orderDetails.shippingCost.toString()).toFixed(2)}</p>
           </div>
 
@@ -518,6 +520,7 @@ export class EmailService {
             <p><strong>Order Date:</strong> ${new Date(orderDetails.createdAt).toLocaleDateString()}</p>
             <p><strong>Current Status:</strong> ${newStatus}</p>
             <p><strong>Purchase Order:</strong> ${orderDetails.paymentOrder || 'N/A'}</p>
+            <p><strong>Payment Method:</strong> ${orderDetails.paymentIntentId === 'wallet' ? 'Wallet' : (orderDetails.cardDetail || 'Card')}</p>
           </div>
 
           <div class="items-table">
