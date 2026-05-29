@@ -700,110 +700,88 @@ export class OrdersService {
 
     // ── Shipping label box ────────────────────────────────────────────────────
     const labelY = 143;
-    const labelH = 175;
     const halfW = 247;
     const pad = 14;
+    const headerH = 22;
+    const lineGap = 4;
+    const toX = 40 + halfW;
 
-    // Outer border
-    doc.lineWidth(2).rect(40, labelY, 515, labelH).stroke('#1e293b');
-    // Divider between FROM and TO
-    doc
-      .lineWidth(1.5)
-      .moveTo(40 + halfW, labelY)
-      .lineTo(40 + halfW, labelY + labelH)
-      .stroke('#1e293b');
+    // Writes a line and returns the Y position after it, measured from the
+    // actual rendered height so long names/addresses that wrap don't overlap
+    // the following line.
+    const writeLabelLine = (
+      text: string,
+      x: number,
+      y: number,
+      width: number,
+      fontSize: number,
+      font: string,
+      color: string,
+    ) => {
+      doc.fillColor(color).fontSize(fontSize).font(font);
+      doc.text(text, x, y, { width });
+      return y + doc.heightOfString(text, { width }) + lineGap;
+    };
+
+    const contentTop = labelY + headerH + 8;
 
     // FROM ────────────────────────────────────────────────────────────────────
-    doc.rect(40, labelY, halfW, 22).fill('#1e293b');
+    let fromY = contentTop;
+    fromY = writeLabelLine('Tru-Scapes®', 40 + pad, fromY, halfW - pad * 2, 13, 'Helvetica-Bold', '#1e293b');
+    fromY = writeLabelLine('Premium Landscaping Solutions', 40 + pad, fromY, halfW - pad * 2, 10, 'Helvetica', '#475569');
+    fromY = writeLabelLine('orders@tru-scapes.com', 40 + pad, fromY, halfW - pad * 2, 10, 'Helvetica', '#475569');
+    fromY = writeLabelLine('www.tru-scapes.com', 40 + pad, fromY, halfW - pad * 2, 10, 'Helvetica', '#475569');
+
+    // TO ──────────────────────────────────────────────────────────────────────
+    const a = order.shippingAddress;
+    const u = order.user;
+    const toW = halfW - pad;
+    let toY = contentTop;
+
+    toY = writeLabelLine(u.name, toX + pad, toY, toW, 13, 'Helvetica-Bold', '#1e293b');
+    if (u.company) {
+      toY = writeLabelLine(u.company, toX + pad, toY, toW, 10, 'Helvetica', '#475569');
+    }
+    if (a) {
+      toY = writeLabelLine(a.street, toX + pad, toY, toW, 10, 'Helvetica', '#1e293b');
+      toY = writeLabelLine(`${a.city}, ${a.state} ${a.zipCode}`, toX + pad, toY, toW, 10, 'Helvetica', '#1e293b');
+      if (a.country) {
+        toY = writeLabelLine(a.country, toX + pad, toY, toW, 10, 'Helvetica', '#1e293b');
+      }
+    }
+    const phone = a?.phone || u.phone;
+    if (phone) {
+      toY = writeLabelLine(`Tel: ${phone}`, toX + pad, toY, toW, 10, 'Helvetica-Bold', '#1e293b');
+    }
+    if (u.email) {
+      toY = writeLabelLine(u.email, toX + pad, toY, toW, 10, 'Helvetica', '#475569');
+    }
+
+    // Box height grows to fit the taller of the two columns
+    const labelBottom = Math.max(fromY, toY) + 6;
+    const labelH = labelBottom - labelY;
+
+    // Outer border + divider (drawn after text; thin strokes at the edges)
+    doc.lineWidth(2).rect(40, labelY, 515, labelH).stroke('#1e293b');
+    doc
+      .lineWidth(1.5)
+      .moveTo(toX, labelY)
+      .lineTo(toX, labelY + labelH)
+      .stroke('#1e293b');
+
+    // Header bars on top of the columns
+    doc.rect(40, labelY, halfW, headerH).fill('#1e293b');
     doc
       .fillColor('white')
       .fontSize(9)
       .font('Helvetica-Bold')
       .text('FROM', 40 + pad, labelY + 7, { width: halfW - pad * 2 });
-
-    let fromY = labelY + 30;
-    doc
-      .fillColor('#1e293b')
-      .fontSize(13)
-      .font('Helvetica-Bold')
-      .text('Tru-Scapes®', 40 + pad, fromY);
-    fromY += 18;
-    doc
-      .fontSize(10)
-      .font('Helvetica')
-      .fillColor('#475569')
-      .text('Premium Landscaping Solutions', 40 + pad, fromY, {
-        width: halfW - pad * 2,
-      });
-    fromY += 14;
-    doc.text('orders@tru-scapes.com', 40 + pad, fromY, {
-      width: halfW - pad * 2,
-    });
-    fromY += 14;
-    doc.text('www.tru-scapes.com', 40 + pad, fromY, { width: halfW - pad * 2 });
-
-    // TO ──────────────────────────────────────────────────────────────────────
-    const toX = 40 + halfW;
-    doc.rect(toX, labelY, halfW + 8, 22).fill('#1e293b');
+    doc.rect(toX, labelY, halfW + 8, headerH).fill('#1e293b');
     doc
       .fillColor('white')
       .fontSize(9)
       .font('Helvetica-Bold')
       .text('SHIP TO', toX + pad, labelY + 7, { width: halfW - pad });
-
-    const a = order.shippingAddress;
-    const u = order.user;
-    let toY = labelY + 30;
-
-    doc
-      .fillColor('#1e293b')
-      .fontSize(13)
-      .font('Helvetica-Bold')
-      .text(u.name, toX + pad, toY, { width: halfW - pad });
-    toY += 18;
-
-    if (u.company) {
-      doc
-        .fontSize(10)
-        .font('Helvetica')
-        .fillColor('#475569')
-        .text(u.company, toX + pad, toY, { width: halfW - pad });
-      toY += 14;
-    }
-
-    if (a) {
-      doc
-        .fontSize(10)
-        .font('Helvetica')
-        .fillColor('#1e293b')
-        .text(a.street, toX + pad, toY, { width: halfW - pad });
-      toY += 14;
-      doc.text(`${a.city}, ${a.state} ${a.zipCode}`, toX + pad, toY, {
-        width: halfW - pad,
-      });
-      toY += 14;
-      if (a.country) {
-        doc.text(a.country, toX + pad, toY, { width: halfW - pad });
-        toY += 14;
-      }
-    }
-
-    const phone = a?.phone || u.phone;
-    if (phone) {
-      doc
-        .fontSize(10)
-        .font('Helvetica-Bold')
-        .fillColor('#1e293b')
-        .text(`Tel: ${phone}`, toX + pad, toY, { width: halfW - pad });
-      toY += 14;
-    }
-    if (u.email) {
-      doc
-        .fontSize(10)
-        .font('Helvetica')
-        .fillColor('#475569')
-        .text(u.email, toX + pad, toY, { width: halfW - pad });
-    }
 
     doc.y = labelY + labelH + 25;
 
