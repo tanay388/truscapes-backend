@@ -63,4 +63,7 @@ export class ProductVariant extends BaseClassEntity {
   @Column({ type: 'integer', nullable: true })
   @RelationId((productVariant: ProductVariant) => productVariant.product)
   productId: number;
+
+  @Column({ type: 'integer', default: 0 })
+  sortOrder: number;
 }

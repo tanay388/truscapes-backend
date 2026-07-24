@@ -1,5 +1,4 @@
 import { DataSource } from 'typeorm';
-import { Migration1729998812283 } from './migrations/1729998812283-migration';
 
 /**
  * TypeORM DataSource configuration for migrations.
@@ -25,7 +24,7 @@ export const datasource = new DataSource({
     rejectUnauthorized: false,
   },
 
-  migrations: [],
+  migrations: [__dirname + '/migrations/*.ts'],
   entities: [__dirname + '/../../**/*.entity{.ts,.js}'],
   logging: ['error', 'warn', 'info'],
 });

@@ -11,9 +11,20 @@ import { ILike } from 'typeorm';
 import { CreateProductVariantDto } from './dto/create-product-variant.dto';
 import { ProductVariant } from './entities/product-variant.entity';
 import { UpdateProductVariantDto } from './dto/update-product-variant.dto';
+import { ReorderProductVariantsDto } from './dto/reorder-product-variants.dto';
 
 @Injectable()
 export class ProductsService {
+  private sortProductVariants<T extends Product | null>(product: T): T {
+    if (product?.variants?.length) {
+      product.variants.sort(
+        (a, b) =>
+          (a.sortOrder ?? 0) - (b.sortOrder ?? 0) || (a.id ?? 0) - (b.id ?? 0),
+      );
+    }
+    return product;
+  }
+
   async create(createProductDto: CreateProductDto) {
     // Ensure new products start as DRAFT since they won't have variants initially
     try {
@@ -37,12 +48,21 @@ export class ProductsService {
     if (!product) {
       return new NotFoundException(`Product with ID ${productId} not found`);
     }
-    const variant = await ProductVariant.save({
+
+    const nextSortOrder =
+      createProductVariantDto.sortOrder ??
+      (product.variants?.reduce(
+        (max, variant) => Math.max(max, variant.sortOrder ?? 0),
+        -1,
+      ) ?? -1) + 1;
+
+    await ProductVariant.save({
       ...createProductVariantDto,
+      sortOrder: nextSortOrder,
       product: { id: productId },
       productId,
     });
-    return await Product.findOneBy({ id: productId });
+    return this.sortProductVariants(await Product.findOneBy({ id: productId }));
   }
 
   async updateVariant(
@@ -55,7 +75,46 @@ export class ProductsService {
       return new NotFoundException(`Variant with ID ${variantId} not found`);
     }
     await ProductVariant.update(variantId, updateProductVariantDto);
-    return await Product.findOneBy({ id: variant.productId });
+    return this.sortProductVariants(
+      await Product.findOneBy({ id: variant.productId }),
+    );
+  }
+
+  async reorderVariants(
+    productId: number,
+    reorderProductVariantsDto: ReorderProductVariantsDto,
+  ) {
+    const product = await Product.findOneBy({ id: productId });
+    if (!product) {
+      throw new NotFoundException(`Product with ID ${productId} not found`);
+    }
+
+    const existingIds = new Set(
+      (product.variants || []).map((variant) => variant.id),
+    );
+    const { orderedVariantIds } = reorderProductVariantsDto;
+
+    if (orderedVariantIds.length !== existingIds.size) {
+      throw new BadRequestException(
+        'orderedVariantIds must include every variant for this product',
+      );
+    }
+
+    for (const variantId of orderedVariantIds) {
+      if (!existingIds.has(variantId)) {
+        throw new BadRequestException(
+          `Variant ${variantId} does not belong to product ${productId}`,
+        );
+      }
+    }
+
+    await Promise.all(
+      orderedVariantIds.map((variantId, index) =>
+        ProductVariant.update(variantId, { sortOrder: index }),
+      ),
+    );
+
+    return this.sortProductVariants(await Product.findOneBy({ id: productId }));
   }
 
   async removeVariant(variantId: number) {
@@ -75,7 +134,9 @@ export class ProductsService {
       );
     }
     await variant.softRemove();
-    return product;
+    return this.sortProductVariants(
+      await Product.findOneBy({ id: product.id }),
+    );
   }
 
   async findAll(search: ProductSearchDto) {
@@ -104,16 +165,18 @@ export class ProductsService {
       ];
     }
 
-    return await Product.find({
+    const products = await Product.find({
       where: whereConditions,
       order: { categoryIndex: 'ASC', index: 'ASC', createdAt: 'DESC' },
       take: take,
       skip: skip,
     });
+    products.forEach((product) => this.sortProductVariants(product));
+    return products;
   }
 
   async findOne(id: number) {
-    return await Product.findOneBy({ id });
+    return this.sortProductVariants(await Product.findOneBy({ id }));
   }
 
   async update(id: number, updateProductDto: UpdateProductDto) {
@@ -166,7 +229,7 @@ export class ProductsService {
       return new NotFoundException(`Product with ID ${id} not found`);
     }
 
-    return await Product.findOneBy({ id });
+    return this.sortProductVariants(await Product.findOneBy({ id }));
   }
 
   async remove(id: number) {

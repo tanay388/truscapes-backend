@@ -86,4 +86,14 @@ export class CreateProductVariantDto {
   @IsNumber()
   @Transform(({ value }) => Number(value))
   productId: number;
+
+  @ApiProperty({
+    description: 'Display order of the variant (lower = first)',
+    example: 0,
+    required: false,
+  })
+  @IsNumber()
+  @IsOptional()
+  @Transform(({ value }) => (value === undefined ? undefined : Number(value)))
+  sortOrder?: number;
 }

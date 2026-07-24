@@ -15,6 +15,7 @@ import { ProductSearchDto } from './dto/product-search.dto';
 import { ApiTags } from '@nestjs/swagger';
 import { CreateProductVariantDto } from './dto/create-product-variant.dto';
 import { UpdateProductVariantDto } from './dto/update-product-variant.dto';
+import { ReorderProductVariantsDto } from './dto/reorder-product-variants.dto';
 
 @Controller('products')
 @ApiTags('products')
@@ -42,6 +43,17 @@ export class ProductsController {
     return this.productsService.updateVariant(
       +variantId,
       updateProductVariantDto,
+    );
+  }
+
+  @Patch('reorder-variants/:productId')
+  reorderVariants(
+    @Param('productId') productId: string,
+    @Body() reorderProductVariantsDto: ReorderProductVariantsDto,
+  ) {
+    return this.productsService.reorderVariants(
+      +productId,
+      reorderProductVariantsDto,
     );
   }
 

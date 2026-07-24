@@ -22,6 +22,7 @@ import { EmailModule } from './providers/email/email.module';
 import { EmailsModule } from './models/emails/emails.module';
 import { AnalyticsModule } from './models/analytics/analytics.module';
 import { CouponsModule } from './models/coupons/coupons.module';
+import { SavedOrdersModule } from './models/saved-orders/saved-orders.module';
 import { APP_FILTER } from '@nestjs/core';
 import { HttpErrorFilter } from './common/utils/error-log';
 
@@ -54,6 +55,7 @@ import { HttpErrorFilter } from './common/utils/error-log';
     EmailsModule,
     AnalyticsModule,
     CouponsModule,
+    SavedOrdersModule,
   ],
   controllers: [AppController],
   providers: [
