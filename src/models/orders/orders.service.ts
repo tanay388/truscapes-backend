@@ -25,7 +25,7 @@ import { CouponsService } from '../coupons/coupons.service';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import * as PDFDocument from 'pdfkit';
 import { PassThrough } from 'stream';
-import { LessThan } from 'typeorm';
+import { Brackets, LessThan } from 'typeorm';
 import * as XLSX from 'xlsx';
 import Stripe from 'stripe';
 
@@ -1406,15 +1406,24 @@ export class OrdersService {
 
   async findAll(pagination: Pagination, filter: OrderFilterDto) {
     const { take = 10, skip = 0 } = pagination;
+
+    // List view only needs order summary + customer name/company.
+    // Avoid joining items/products/variants/coupons and never hydrate
+    // User.eager relations (wallet + all transactions).
     const query = Order.createQueryBuilder('order')
-      .leftJoinAndSelect('order.user', 'user')
-      .leftJoinAndSelect('order.items', 'items')
-      .leftJoinAndSelect('items.product', 'product')
-      .leftJoinAndSelect('items.variant', 'variant')
-      .leftJoinAndSelect('order.appliedCoupon', 'appliedCoupon');
+      .leftJoin('order.user', 'user')
+      .select([
+        'order.id',
+        'order.status',
+        'order.paymentStatus',
+        'order.total',
+        'order.createdAt',
+        'order.paymentOrder',
+        'order.trackingNumber',
+      ])
+      .addSelect(['user.id', 'user.name', 'user.company', 'user.email']);
 
     try {
-      // Apply filters if they exist
       if (filter?.status) {
         query.andWhere('order.status = :status', { status: filter.status });
       }
@@ -1443,38 +1452,64 @@ export class OrdersService {
         });
       }
 
-      // Flexible search across order/user/product fields
       if (filter?.q && filter.q.trim().length > 0) {
         const term = `%${filter.q.trim()}%`;
         const numericId = Number(filter.q);
         const hasNumericId = Number.isFinite(numericId);
-        const whereParts = [
-          "LOWER(COALESCE(user.name, '')) LIKE LOWER(:term)",
-          "LOWER(COALESCE(user.email, '')) LIKE LOWER(:term)",
-          "LOWER(COALESCE(user.company, '')) LIKE LOWER(:term)",
-          "LOWER(COALESCE(user.companyAddress, '')) LIKE LOWER(:term)",
-          "LOWER(COALESCE(user.phone, '')) LIKE LOWER(:term)",
-          "LOWER(COALESCE(order.paymentOrder, '')) LIKE LOWER(:term)",
-          "LOWER(COALESCE(order.trackingNumber, '')) LIKE LOWER(:term)",
-          "LOWER(COALESCE(product.name, '')) LIKE LOWER(:term)",
-          "LOWER(COALESCE(variant.name, '')) LIKE LOWER(:term)",
-        ];
-        // Add ID equality if q is numeric
-        if (hasNumericId) {
-          whereParts.push('order.id = :id');
-        }
-        query.andWhere(`(${whereParts.join(' OR ')})`, {
-          term,
-          ...(hasNumericId ? { id: numericId } : {}),
-        });
+
+        query.andWhere(
+          new Brackets((qb) => {
+            qb.where("LOWER(COALESCE(user.name, '')) LIKE LOWER(:term)", {
+              term,
+            })
+              .orWhere("LOWER(COALESCE(user.email, '')) LIKE LOWER(:term)", {
+                term,
+              })
+              .orWhere("LOWER(COALESCE(user.company, '')) LIKE LOWER(:term)", {
+                term,
+              })
+              .orWhere(
+                "LOWER(COALESCE(user.companyAddress, '')) LIKE LOWER(:term)",
+                { term },
+              )
+              .orWhere("LOWER(COALESCE(user.phone, '')) LIKE LOWER(:term)", {
+                term,
+              })
+              .orWhere(
+                "LOWER(COALESCE(order.paymentOrder, '')) LIKE LOWER(:term)",
+                { term },
+              )
+              .orWhere(
+                "LOWER(COALESCE(order.trackingNumber, '')) LIKE LOWER(:term)",
+                { term },
+              )
+              .orWhere(
+                `EXISTS (
+                  SELECT 1
+                  FROM order_items oi
+                  LEFT JOIN products p ON p.id = oi."productId"
+                  LEFT JOIN product_variants pv ON pv.id = oi."variantId"
+                  WHERE oi."orderId" = "order".id
+                    AND oi."deletedAt" IS NULL
+                    AND (
+                      LOWER(COALESCE(p.name, '')) LIKE LOWER(:term)
+                      OR LOWER(COALESCE(pv.name, '')) LIKE LOWER(:term)
+                    )
+                )`,
+                { term },
+              );
+
+            if (hasNumericId) {
+              qb.orWhere('order.id = :id', { id: numericId });
+            }
+          }),
+        );
       }
 
-      // Add pagination and ordering
       query.orderBy('order.createdAt', 'DESC').skip(skip).take(take);
 
-      const [orders, total] = await query.getManyAndCount();
-
-      return orders;
+      // Admin infinite scroll only checks page length — skip expensive COUNT
+      return await query.getMany();
     } catch (error) {
       throw new BadRequestException('Failed to fetch orders: ' + error.message);
     }

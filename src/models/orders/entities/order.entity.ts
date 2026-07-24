@@ -2,7 +2,7 @@ import { BaseClassEntity } from 'src/common/entities/base.extend-entity';
 import { Product } from 'src/models/products/entities/product.entity';
 import { User } from 'src/models/user/entities/user.entity';
 import { Coupon } from 'src/models/coupons/entities/coupon.entity';
-import { Entity, Column, ManyToOne, OneToMany, JoinColumn } from 'typeorm';
+import { Entity, Column, ManyToOne, OneToMany, JoinColumn, Index } from 'typeorm';
 import { OrderItem } from './order-item.entity';
 import { PaymentMethod } from 'src/models/transactions/entities/transaction.entity';
 
@@ -26,6 +26,8 @@ export enum PaymentStatus {
 }
 
 @Entity('orders')
+@Index('IDX_orders_created_at', ['createdAt'])
+@Index('IDX_orders_status', ['status'])
 export class Order extends BaseClassEntity {
   @ManyToOne(() => User, {
     eager: true,
@@ -33,6 +35,7 @@ export class Order extends BaseClassEntity {
     onUpdate: 'CASCADE',
   })
   @JoinColumn()
+  @Index('IDX_orders_user')
   user: User;
 
   @OneToMany(() => OrderItem, (item) => item.order, {
