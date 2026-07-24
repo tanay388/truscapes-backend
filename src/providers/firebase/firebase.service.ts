@@ -4,24 +4,24 @@ import * as admin from 'firebase-admin';
 
 import DecodedIdToken = admin.auth.DecodedIdToken;
 import Auth = admin.auth.Auth;
-import { ConfigService } from '@nestjs/config';
 import { UserRecord } from 'firebase-admin/lib/auth/user-record';
-import axios from 'axios';
 export type FirebaseUser = DecodedIdToken;
+
+type CachedToken = {
+  user: FirebaseUser;
+  expiresAtMs: number;
+};
 
 @Injectable()
 export class FirebaseService {
   auth: Auth;
   app: admin.app.App;
   messaging: admin.messaging.Messaging;
-  //   webApiKey: String;
 
-  /**
-   * Initializes the FirebaseService.
-   * If the Firebase app has not been initialized, it initializes it with the provided
-   * configuration. If the app has already been initialized, it just returns the existing
-   * app.
-   */
+  /** Avoid re-verifying the same Bearer token on every API call in a session. */
+  private readonly tokenCache = new Map<string, CachedToken>();
+  private readonly tokenCacheMaxEntries = 500;
+
   constructor() {
     if (admin.apps.length === 0) {
       this.app = admin.initializeApp({
@@ -43,19 +43,32 @@ export class FirebaseService {
   async getUserProfile(token: string): Promise<FirebaseUser> {
     try {
       if (token.startsWith('id')) {
-        // console.log(token)
         const user = await this.auth.getUser(token.replace('id ', ''));
-        // token = user;
-        const user_decoded_id =
-          await this.transformUserRecordToTokenFormat(user);
-        // console.log(user_decoded_id);
-        return user_decoded_id;
+        return await this.transformUserRecordToTokenFormat(user);
       }
-      const value = await this.auth.verifyIdToken(token, true);
-      // const v2= await this.auth.verifynm
+
+      const cached = this.tokenCache.get(token);
+      if (cached && cached.expiresAtMs > Date.now()) {
+        return cached.user;
+      }
+
+      // checkRevoked=false: verify JWT locally with cached Google public keys.
+      const value = await this.auth.verifyIdToken(token, false);
+
+      // Cache until just before JWT expiry (cap at 5 minutes).
+      const jwtExpMs = (value.exp || 0) * 1000;
+      const expiresAtMs = Math.min(jwtExpMs - 30_000, Date.now() + 5 * 60_000);
+      if (expiresAtMs > Date.now()) {
+        if (this.tokenCache.size >= this.tokenCacheMaxEntries) {
+          const firstKey = this.tokenCache.keys().next().value;
+          if (firstKey) this.tokenCache.delete(firstKey);
+        }
+        this.tokenCache.set(token, { user: value, expiresAtMs });
+      }
 
       return value;
     } catch (e) {
+      this.tokenCache.delete(token);
       console.error(e);
       throw e;
     }
@@ -65,7 +78,6 @@ export class FirebaseService {
     userRecord: UserRecord,
   ): Promise<DecodedIdToken> {
     try {
-      // Assuming displayName and photoURL are present in the userRecord
       const userProfile: DecodedIdToken = {
         name: userRecord.displayName,
         picture: userRecord.photoURL,
@@ -75,7 +87,7 @@ export class FirebaseService {
         user_id: userRecord.uid,
         sub: userRecord.uid,
         iat: Math.floor(Date.now() / 1000),
-        exp: Math.floor(Date.now() / 1000) + 3600, // Set expiration time (1 hour from now)
+        exp: Math.floor(Date.now() / 1000) + 3600,
         email: userRecord.email,
         email_verified: userRecord.emailVerified,
         firebase: {

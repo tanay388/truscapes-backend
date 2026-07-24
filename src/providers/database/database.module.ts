@@ -26,8 +26,14 @@ import { TypeOrmModule } from '@nestjs/typeorm';
         database: process.env.DB_NAME,
         entities: [__dirname + '/../../**/*.entity{.ts,.js}'],
         synchronize: false,
-        logging: ['error', 'warn', 'info'],
+        logging: ['error', 'warn'],
         ssl: { rejectUnauthorized: false },
+        // Keep a warm pool to remote Postgres (SSL RTT is expensive per new connection)
+        extra: {
+          max: 20,
+          idleTimeoutMillis: 60_000,
+          connectionTimeoutMillis: 10_000,
+        },
       }),
     }),
   ],

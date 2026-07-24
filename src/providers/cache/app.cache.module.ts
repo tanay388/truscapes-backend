@@ -8,6 +8,12 @@ import { Module } from '@nestjs/common';
  * The cache is also set to be global, meaning it can be accessed from any part of the application.
  */
 @Module({
-  imports: [CacheModule.register({ ttl: 5000, max: 30000, isGlobal: true })],
+  imports: [
+    CacheModule.register({
+      ttl: 15 * 60 * 1000, // 15 minutes (cache-manager v5: milliseconds)
+      max: 30000,
+      isGlobal: true,
+    }),
+  ],
 })
 export class AppCacheModule {}

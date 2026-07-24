@@ -1,8 +1,11 @@
 import {
   BadRequestException,
+  Inject,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import { Cache } from 'cache-manager';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { User, UserRole } from './entities/user.entity';
 import {
@@ -22,12 +25,23 @@ import { ForgotPasswordDto } from './dto/forgot-password.dto';
 
 @Injectable()
 export class UserService {
+  private readonly profileCacheTtlMs = 2 * 60 * 1000; // 2 minutes
+
   constructor(
     private uploader: UploaderService,
     private notificationService: NotificationService,
     private emailService: EmailService,
     private firebaseService: FirebaseService,
+    @Inject(CACHE_MANAGER) private readonly cacheManager: Cache,
   ) {}
+
+  private profileCacheKey(uid: string) {
+    return `user:profile:${uid}`;
+  }
+
+  private async invalidateProfileCache(uid: string) {
+    await this.cacheManager.del(this.profileCacheKey(uid));
+  }
 
   async deleteUser(userId: string, adminId: string) {
     const user = await User.findOne({ where: { id: userId } });
@@ -65,20 +79,35 @@ export class UserService {
   }
 
   async getProfile(fUser: FirebaseUser, token?: string) {
-    const user = await User.findOne({
-      where: { id: fUser.uid },
-    });
+    const cacheKey = this.profileCacheKey(fUser.uid);
+    const cached = await this.cacheManager.get<any>(cacheKey);
+    if (cached) {
+      // Keep notification token updates off the critical path
+      if (token) {
+        void this.updateToken(fUser.uid, token);
+      }
+      return cached;
+    }
+
+    // Single round-trip: user + wallet only
+    const user = await User.createQueryBuilder('user')
+      .leftJoinAndSelect('user.wallet', 'wallet')
+      .where('user.id = :id', { id: fUser.uid })
+      .getOne();
 
     if (!user) return this.createUserProfile(fUser);
 
-    if (token) this.updateToken(fUser.uid, token);
+    if (token) {
+      void this.updateToken(fUser.uid, token);
+    }
 
-    // this.analyticsService.addAnalytics(user, AnalyticsType.login);
-
-    return {
+    const profile = {
       ...user,
       name: `${user.name}'s ${user.companyAddress}`,
     };
+
+    await this.cacheManager.set(cacheKey, profile, this.profileCacheTtlMs);
+    return profile;
   }
 
   async getUsers(searchDto: SearchUserDto) {
@@ -124,6 +153,7 @@ export class UserService {
     const user = await User.findOne({ where: { id: userId } });
     user.approved = true;
     await user.save();
+    await this.invalidateProfileCache(userId);
 
     await this.emailService.sendAccountApprovedEmail(
       user.email,
@@ -137,6 +167,7 @@ export class UserService {
     const user = await User.findOne({ where: { id: userId } });
     user.role = UserRole.ADMIN;
     await user.save();
+    await this.invalidateProfileCache(userId);
     return user;
   }
 
@@ -144,6 +175,7 @@ export class UserService {
     const user = await User.findOne({ where: { id: userId } });
     user.approved = false;
     await user.save();
+    await this.invalidateProfileCache(userId);
 
     return user;
   }
@@ -156,6 +188,7 @@ export class UserService {
 
     user.isLocalDealer = !user.isLocalDealer;
     await user.save();
+    await this.invalidateProfileCache(userId);
 
     return {
       message: `User ${user.isLocalDealer ? 'marked as' : 'unmarked as'} local dealer`,
@@ -346,6 +379,7 @@ export class UserService {
       howYouHearAboutUs,
     });
 
+    await this.invalidateProfileCache(uid);
     return this.getProfile(fUser);
   }
 

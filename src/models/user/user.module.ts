@@ -8,12 +8,10 @@ import { JwtStrategy } from './security/jwt.strategy';
 import { UploaderModule } from '../../providers/uploader/uploader.module';
 import { UserController } from './user.controller';
 import { UserService } from './user.service';
-import { CacheModule } from '@nestjs/cache-manager';
 import { EmailModule } from 'src/providers/email/email.module';
 
 @Module({
   imports: [
-    CacheModule.register(),
     // MailModule,
     // AnalyticsModule,
     EmailModule,

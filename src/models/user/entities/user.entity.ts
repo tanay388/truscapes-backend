@@ -128,9 +128,9 @@ export class User extends BaseEntity {
   @JoinColumn()
   wallet: Wallet;
 
+  // Load via /transactions endpoints — never eager (was making GET /user very slow)
   @OneToMany(() => Transaction, (t) => t.user, {
     cascade: true,
-    eager: true,
     onDelete: 'CASCADE',
     onUpdate: 'CASCADE',
   })

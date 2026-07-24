@@ -30,10 +30,11 @@ export class AdminOnlyGuard implements CanActivate {
       throw new UnauthorizedException('User not authenticated');
     }
 
-    // Get the user from database
-    const user = await User.findOne({
-      where: { id: firebaseUser.uid },
-    });
+    // Get the user from database — only need role for this check
+    const user = await User.createQueryBuilder('user')
+      .select(['user.id', 'user.role'])
+      .where('user.id = :id', { id: firebaseUser.uid })
+      .getOne();
 
     if (!user) {
       throw new UnauthorizedException('User not found');
