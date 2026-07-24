@@ -1,6 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import { Cache } from 'cache-manager';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, Repository } from 'typeorm';
+import { Repository } from 'typeorm';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
 import { Category } from './entities/category.entity';
@@ -9,11 +11,20 @@ import { UploaderService } from 'src/providers/uploader/uploader.service';
 
 @Injectable()
 export class CategoryService {
+  private readonly listCacheKey = 'category:list';
+  private readonly listCacheTtlMs = 15 * 60 * 1000; // 15 minutes
+  private listInflight: Promise<Category[]> | null = null;
+
   constructor(
     @InjectRepository(Category)
     private readonly categoryRepository: Repository<Category>,
     private uploader: UploaderService,
+    @Inject(CACHE_MANAGER) private readonly cacheManager: Cache,
   ) {}
+
+  private async invalidateListCache() {
+    await this.cacheManager.del(this.listCacheKey);
+  }
 
   async create(
     createCategoryDto: CreateCategoryDto,
@@ -51,18 +62,42 @@ export class CategoryService {
     });
 
     await this.categoryRepository.save(category);
+    await this.invalidateListCache();
 
     return category;
   }
 
   async findAll() {
-    return await this.categoryRepository.find({
-      relations: ['parent', 'children'],
-      order: {
-        index: 'ASC',
-        createdAt: 'DESC',
-      },
-    });
+    const cached = await this.cacheManager.get<Category[]>(this.listCacheKey);
+    if (cached) {
+      return cached;
+    }
+
+    if (this.listInflight) {
+      return this.listInflight;
+    }
+
+    this.listInflight = this.categoryRepository
+      .find({
+        relations: ['parent', 'children'],
+        order: {
+          index: 'ASC',
+          createdAt: 'DESC',
+        },
+      })
+      .then(async (categories) => {
+        await this.cacheManager.set(
+          this.listCacheKey,
+          categories,
+          this.listCacheTtlMs,
+        );
+        return categories;
+      })
+      .finally(() => {
+        this.listInflight = null;
+      });
+
+    return this.listInflight;
   }
 
   async findOne(id: number) {
@@ -118,6 +153,7 @@ export class CategoryService {
     }
 
     await this.categoryRepository.save(category);
+    await this.invalidateListCache();
 
     return category;
   }
@@ -130,6 +166,7 @@ export class CategoryService {
       throw new NotFoundException(`Category with ID ${id} not found`);
     }
     await this.categoryRepository.softRemove(category);
+    await this.invalidateListCache();
     return { message: `Category with ID ${id} successfully deleted` };
   }
 

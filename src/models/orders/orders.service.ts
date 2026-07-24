@@ -1517,21 +1517,20 @@ export class OrdersService {
 
   async findUserOrders(userId: string, pagination: Pagination) {
     const { take = 10, skip = 0 } = pagination;
-    return await Order.find({
-      where: { user: { id: userId } },
-      relations: {
-        items: {
-          product: true,
-          variant: true,
-        },
-        appliedCoupon: true,
-      },
-      withDeleted: true, // This enables including soft deleted records
-      relationLoadStrategy: 'query',
-      take,
-      skip,
-      order: { createdAt: 'DESC' },
-    });
+
+    // One query: only the fields shop list/profile need (no Product.eager variants/category)
+    return await Order.createQueryBuilder('order')
+      .leftJoinAndSelect('order.items', 'items')
+      .leftJoin('items.product', 'product')
+      .addSelect(['product.id', 'product.name'])
+      .leftJoin('items.variant', 'variant')
+      .addSelect(['variant.id', 'variant.name'])
+      .where('order.userId = :userId', { userId })
+      .orderBy('order.createdAt', 'DESC')
+      .addOrderBy('items.id', 'ASC')
+      .skip(skip)
+      .take(take)
+      .getMany();
   }
 
   async findOne(id: number, userId: string) {
