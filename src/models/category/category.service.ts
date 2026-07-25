@@ -24,6 +24,8 @@ export class CategoryService {
 
   private async invalidateListCache() {
     await this.cacheManager.del(this.listCacheKey);
+    // Home shelves include category names/order — bust that cache too
+    await this.cacheManager.del('products:home-preview:v1');
   }
 
   async create(

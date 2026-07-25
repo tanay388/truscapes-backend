@@ -16,6 +16,8 @@ import { ApiTags } from '@nestjs/swagger';
 import { CreateProductVariantDto } from './dto/create-product-variant.dto';
 import { UpdateProductVariantDto } from './dto/update-product-variant.dto';
 import { ReorderProductVariantsDto } from './dto/reorder-product-variants.dto';
+import { FUser } from '../user/decorator/firebase.user.decorator';
+import { FirebaseUser } from 'src/providers/firebase/firebase.service';
 
 @Controller('products')
 @ApiTags('products')
@@ -62,14 +64,28 @@ export class ProductsController {
     return this.productsService.removeVariant(+variantId);
   }
 
+  @Get('home-preview')
+  getHomePreview(
+    @Query('take') take?: string,
+    @FUser() user?: FirebaseUser,
+  ) {
+    return this.productsService.getHomePreview(
+      take ? Number(take) : 8,
+      Boolean(user),
+    );
+  }
+
   @Get()
-  findAll(@Query() search: ProductSearchDto) {
-    return this.productsService.findAll(search);
+  findAll(
+    @Query() search: ProductSearchDto,
+    @FUser() user?: FirebaseUser,
+  ) {
+    return this.productsService.findAll(search, Boolean(user));
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.productsService.findOne(+id);
+  findOne(@Param('id') id: string, @FUser() user?: FirebaseUser) {
+    return this.productsService.findOne(+id, Boolean(user));
   }
 
   @Patch(':id')
