@@ -103,6 +103,14 @@ export class CreateOrderDto {
   @IsString()
   couponCode?: string;
 
+  @ApiPropertyOptional({
+    description: 'Total shown to the customer at checkout (quote integrity)',
+    required: false,
+  })
+  @IsOptional()
+  @IsNumber()
+  expectedTotal?: number;
+
   @ApiPropertyOptional({ type: CardInfo, required: false })
   @IsOptional()
   @IsObject()

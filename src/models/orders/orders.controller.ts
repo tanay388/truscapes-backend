@@ -13,6 +13,7 @@ import {
 } from '@nestjs/common';
 import { OrdersService } from './orders.service';
 import { CreateOrderDto } from './dto/create-order.dto';
+import { QuoteOrderDto } from './dto/quote-order.dto';
 import { UpdateOrderDto } from './dto/update-order.dto';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { FirebaseSecure } from '../user/decorator/firebase.secure.decorator';
@@ -29,6 +30,12 @@ import { Response } from 'express';
 @FirebaseSecure()
 export class OrdersController {
   constructor(private readonly ordersService: OrdersService) {}
+
+  @Post('quote')
+  @ApiOperation({ summary: 'Quote order totals and coupon discount' })
+  quote(@Body() quoteDto: QuoteOrderDto, @FUser() user: FirebaseUser) {
+    return this.ordersService.quoteOrder(quoteDto, user.uid);
+  }
 
   @Post()
   @ApiOperation({ summary: 'Create a new order' })

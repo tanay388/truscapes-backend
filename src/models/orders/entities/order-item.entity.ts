@@ -26,4 +26,7 @@ export class OrderItem extends BaseClassEntity {
 
   @Column('decimal', { precision: 10, scale: 2 })
   total: string;
+
+  @Column('decimal', { precision: 10, scale: 2, default: 0 })
+  discountAmount: string;
 }

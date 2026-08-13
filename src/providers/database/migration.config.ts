@@ -23,7 +23,6 @@ export const datasource = new DataSource({
   ssl: {
     rejectUnauthorized: false,
   },
-
   migrations: [__dirname + '/migrations/*.ts'],
   entities: [__dirname + '/../../**/*.entity{.ts,.js}'],
   logging: ['error', 'warn', 'info'],

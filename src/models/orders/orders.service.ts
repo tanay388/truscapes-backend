@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { OrderFilterDto } from './dto/order-filter.dto';
 import { CreateOrderDto } from './dto/create-order.dto';
+import { QuoteOrderDto } from './dto/quote-order.dto';
 import { UpdateOrderDto } from './dto/update-order.dto';
 import { Order, OrderStatus, PaymentStatus } from './entities/order.entity';
 import { OrderItem } from './entities/order-item.entity';
@@ -22,6 +23,7 @@ import {
 import { EmailService } from 'src/providers/email/email.service';
 import { AdminEmailEntity } from '../emails/entities/admin-email.entity';
 import { CouponsService } from '../coupons/coupons.service';
+import { PricedLine } from '../coupons/coupon-discount.calculator';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import * as PDFDocument from 'pdfkit';
 import { PassThrough } from 'stream';
@@ -403,6 +405,23 @@ export class OrdersService {
             width: columns.total.width - 20,
           },
         );
+
+      const itemDiscount = Number(item.discountAmount || 0);
+      if (itemDiscount > 0) {
+        doc
+          .fontSize(9)
+          .font('Helvetica')
+          .fillColor('#16a34a')
+          .text(
+            `−$${itemDiscount.toFixed(2)} coupon`,
+            columns.total.x + 10,
+            currentRowY + 34,
+            {
+              align: 'right',
+              width: columns.total.width - 20,
+            },
+          );
+      }
 
       currentRowY += rowHeight;
     });
@@ -977,6 +996,7 @@ export class OrdersService {
             'Quantity',
             'Price',
             'Item Total',
+            'Item Discount',
             'Subtotal',
             'Shipping Cost',
             'Coupon Code',
@@ -1008,6 +1028,9 @@ export class OrdersService {
           Quantity: item?.quantity || 0,
           Price: item?.price ? Number(item.price).toFixed(3) : 0,
           'Item Total': item?.total ? Number(item.total).toFixed(2) : 0,
+          'Item Discount': item?.discountAmount
+            ? Number(item.discountAmount).toFixed(2)
+            : '0.00',
           Subtotal: order?.subtotal || 0,
           'Shipping Cost': order?.shippingCost || 0,
           'Coupon Code': order?.couponCode || '',
@@ -1147,30 +1170,25 @@ export class OrdersService {
     }
   }
 
-  async create(createOrderDto: CreateOrderDto, userId: string) {
-    const user = await User.findOne({ where: { id: userId } });
-    if (!user) {
-      throw new NotFoundException('User not found');
-    }
-
-    // Create new order
-    const order = new Order();
-    order.user = user;
-    order.shippingAddress = createOrderDto.shippingAddress;
-    order.notes = createOrderDto.notes;
-    order.paymentOrder = createOrderDto.paymentOrder;
-
+  private async priceCartItems(
+    items: { productId: number; variantId?: number; quantity: number }[],
+    user: User,
+  ): Promise<{
+    orderItems: OrderItem[];
+    subtotalCents: number;
+    lines: PricedLine[];
+  }> {
     let subtotalCents = 0;
     const orderItems: OrderItem[] = [];
+    const lines: PricedLine[] = [];
 
-    // Process each order item
-    for (const item of createOrderDto.items) {
+    for (const item of items) {
       const product = await Product.findOne({
         where: { id: item.productId },
       });
       if (!product) {
         throw new NotFoundException(
-          `Product with ID ${item.productId} not found`,
+          'One of the products in your cart could not be found.',
         );
       }
 
@@ -1181,14 +1199,14 @@ export class OrdersService {
         });
         if (!variant) {
           throw new NotFoundException(
-            `Product variant with ID ${item.variantId} not found`,
+            'One of the product options in your cart could not be found.',
           );
         }
       }
 
       const quantity = Number(item.quantity);
       if (!Number.isFinite(quantity) || quantity <= 0) {
-        throw new BadRequestException('Invalid item quantity');
+        throw new BadRequestException('Please enter a valid item quantity.');
       }
 
       const basePrice = this.getRoleBasedPrice(product, variant, user);
@@ -1214,9 +1232,141 @@ export class OrdersService {
       orderItem.quantity = quantity;
       orderItem.price = this.millsToMoneyString(unitPriceMills);
       orderItem.total = this.centsToMoneyString(lineTotalCents);
+      orderItem.discountAmount = '0.00';
       orderItems.push(orderItem);
       subtotalCents += lineTotalCents;
+      lines.push({
+        productId: Number(product.id),
+        variantId: variant ? Number(variant.id) : null,
+        unitPriceMills,
+        quantity,
+        lineTotalCents,
+      });
     }
+
+    return { orderItems, subtotalCents, lines };
+  }
+
+  async quoteOrder(quoteDto: QuoteOrderDto, userId: string) {
+    const user = await User.findOne({ where: { id: userId } });
+    if (!user) {
+      throw new NotFoundException('We could not find your account.');
+    }
+
+    if (!quoteDto.items?.length) {
+      throw new BadRequestException('Your cart is empty.');
+    }
+
+    const { subtotalCents, lines } = await this.priceCartItems(
+      quoteDto.items,
+      user,
+    );
+
+    let shippingCostCents = this.calculateShippingCents(subtotalCents);
+    if (quoteDto.shippingAddress?.city === 'Store Collection') {
+      shippingCostCents = 0;
+    }
+
+    let discountCents = 0;
+    let couponPayload: any = null;
+    let isValid = true;
+    let message: string | undefined;
+    let lineDiscounts: {
+      productId: number;
+      variantId?: number | null;
+      discountCents: number;
+      freeUnits: number;
+    }[] = lines.map((l) => ({
+      productId: l.productId,
+      variantId: l.variantId,
+      discountCents: 0,
+      freeUnits: 0,
+    }));
+    let eligibleLineCount = 0;
+    let freeUnits = 0;
+    let scopeLabel: string | undefined;
+    let discountDescription: string | undefined;
+
+    if (quoteDto.couponCode) {
+      const couponValidation =
+        await this.couponsService.validateAndApplyCoupon(
+          {
+            couponCode: quoteDto.couponCode,
+            orderAmount: Number(this.centsToMoneyString(subtotalCents)),
+          },
+          userId,
+          lines,
+        );
+
+      isValid = couponValidation.isValid;
+      message = couponValidation.message;
+      scopeLabel = couponValidation.scopeLabel;
+      if (couponValidation.lineDiscounts) {
+        lineDiscounts = couponValidation.lineDiscounts;
+      }
+      eligibleLineCount = couponValidation.eligibleLineCount || 0;
+      freeUnits = couponValidation.freeUnits || 0;
+
+      if (couponValidation.isValid) {
+        discountCents = this.parseScaledInt(
+          couponValidation.discountAmount || 0,
+          2,
+        );
+        couponPayload = couponValidation.coupon;
+        discountDescription = this.couponsService.getDiscountDescription(
+          couponValidation.coupon,
+        );
+      } else if (couponValidation.coupon) {
+        couponPayload = couponValidation.coupon;
+        discountDescription = this.couponsService.getDiscountDescription(
+          couponValidation.coupon,
+        );
+      }
+    }
+
+    const totalCents = Math.max(
+      0,
+      subtotalCents + shippingCostCents - discountCents,
+    );
+
+    return {
+      subtotal: Number(this.centsToMoneyString(subtotalCents)),
+      shippingCost: Number(this.centsToMoneyString(shippingCostCents)),
+      discountAmount: Number(this.centsToMoneyString(discountCents)),
+      total: Number(this.centsToMoneyString(totalCents)),
+      isValid,
+      message,
+      coupon: couponPayload,
+      discountDescription,
+      scopeLabel,
+      eligibleLineCount,
+      totalLineCount: lines.length,
+      freeUnits,
+      lineDiscounts: lineDiscounts.map((ld) => ({
+        productId: ld.productId,
+        variantId: ld.variantId,
+        discountAmount: Number(this.centsToMoneyString(ld.discountCents)),
+        freeUnits: ld.freeUnits,
+      })),
+    };
+  }
+
+  async create(createOrderDto: CreateOrderDto, userId: string) {
+    const user = await User.findOne({ where: { id: userId } });
+    if (!user) {
+      throw new NotFoundException('We could not find your account.');
+    }
+
+    const order = new Order();
+    order.user = user;
+    order.shippingAddress = createOrderDto.shippingAddress;
+    order.notes = createOrderDto.notes;
+    order.paymentOrder = createOrderDto.paymentOrder;
+
+    const { orderItems, subtotalCents, lines } = await this.priceCartItems(
+      createOrderDto.items,
+      user,
+    );
 
     let shippingCostCents = this.calculateShippingCents(subtotalCents);
 
@@ -1224,19 +1374,26 @@ export class OrdersService {
       shippingCostCents = 0;
     }
 
-    // Handle coupon application
     let discountCents = 0;
     let appliedCoupon = null;
     let couponCode = null;
+    let lineDiscounts: {
+      productId: number;
+      variantId?: number | null;
+      discountCents: number;
+      freeUnits: number;
+    }[] = [];
 
     if (createOrderDto.couponCode) {
-      const couponValidation = await this.couponsService.validateAndApplyCoupon(
-        {
-          couponCode: createOrderDto.couponCode,
-          orderAmount: Number(this.centsToMoneyString(subtotalCents)),
-        },
-        userId,
-      );
+      const couponValidation =
+        await this.couponsService.validateAndApplyCoupon(
+          {
+            couponCode: createOrderDto.couponCode,
+            orderAmount: Number(this.centsToMoneyString(subtotalCents)),
+          },
+          userId,
+          lines,
+        );
 
       if (!couponValidation.isValid) {
         throw new BadRequestException(couponValidation.message);
@@ -1248,9 +1405,36 @@ export class OrdersService {
       );
       appliedCoupon = couponValidation.coupon;
       couponCode = createOrderDto.couponCode;
+      lineDiscounts = couponValidation.lineDiscounts || [];
     }
-    const totalCents = subtotalCents + shippingCostCents - discountCents;
+
+    for (let i = 0; i < orderItems.length; i++) {
+      const ld = lineDiscounts[i];
+      orderItems[i].discountAmount = this.centsToMoneyString(
+        ld?.discountCents || 0,
+      );
+    }
+
+    const totalCents = Math.max(
+      0,
+      subtotalCents + shippingCostCents - discountCents,
+    );
     const totalAmount = Number(this.centsToMoneyString(totalCents));
+
+    if (
+      createOrderDto.expectedTotal != null &&
+      Number.isFinite(Number(createOrderDto.expectedTotal))
+    ) {
+      const expectedCents = this.parseScaledInt(
+        createOrderDto.expectedTotal,
+        2,
+      );
+      if (expectedCents !== totalCents) {
+        throw new BadRequestException(
+          'Your order total has changed. Please review the updated summary and try again.',
+        );
+      }
+    }
 
     order.items = orderItems;
     order.subtotal = Number(this.centsToMoneyString(subtotalCents));
