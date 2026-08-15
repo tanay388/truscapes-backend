@@ -88,7 +88,46 @@ describe('calculateCouponDiscount', () => {
     expect(result.discountCents).toBe(0);
   });
 
-  it('applies BOGO to cheapest units with odd quantities', () => {
+  it('Buy 1 Get 1 gives one free for a single unit (true 1-for-1)', () => {
+    const lines = [line(1, 40, 1)];
+    const result = calculateCouponDiscount(
+      {
+        type: CouponType.BOGO,
+        value: 0,
+        bogoBuyQuantity: 1,
+        bogoGetQuantity: 1,
+        bogoGetDiscountPercent: 100,
+        entireOrder: true,
+      },
+      null,
+      lines,
+    );
+
+    expect(result.freeUnits).toBe(1);
+    expect(result.discountCents).toBe(4000);
+    expect(result.lineDiscounts[0].freeUnits).toBe(1);
+  });
+
+  it('Buy 1 Get 1 matches odd quantities one-for-one', () => {
+    const lines = [line(1, 30, 3)];
+    const result = calculateCouponDiscount(
+      {
+        type: CouponType.BOGO,
+        value: 0,
+        bogoBuyQuantity: 1,
+        bogoGetQuantity: 1,
+        bogoGetDiscountPercent: 100,
+        entireOrder: true,
+      },
+      null,
+      lines,
+    );
+
+    expect(result.freeUnits).toBe(3);
+    expect(result.discountCents).toBe(9000);
+  });
+
+  it('Buy 2 Get 1 awards free units from paid sets only', () => {
     const lines = [line(1, 30, 3)];
     const result = calculateCouponDiscount(
       {
@@ -127,7 +166,7 @@ describe('calculateCouponDiscount', () => {
     expect(result.discountCents).toBe(2000);
   });
 
-  it('pools BOGO across products and discounts the cheapest', () => {
+  it('awards BOGO free units per product line (same-item match)', () => {
     const lines = [line(1, 40, 1), line(2, 25, 1)];
     const result = calculateCouponDiscount(
       {
@@ -142,9 +181,9 @@ describe('calculateCouponDiscount', () => {
       lines,
     );
 
-    expect(result.freeUnits).toBe(1);
-    expect(result.discountCents).toBe(2500);
-    expect(result.lineDiscounts[1].discountCents).toBe(2500);
-    expect(result.lineDiscounts[0].discountCents).toBe(0);
+    expect(result.freeUnits).toBe(2);
+    expect(result.lineDiscounts[0].freeUnits).toBe(1);
+    expect(result.lineDiscounts[1].freeUnits).toBe(1);
+    expect(result.discountCents).toBe(6500);
   });
 });

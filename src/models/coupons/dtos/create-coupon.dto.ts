@@ -139,4 +139,11 @@ export class CreateCouponDto {
   @IsOptional()
   @Transform(({ value }) => value === 'true' || value === true)
   isActive?: boolean = true;
+
+  @IsBoolean({
+    message: 'Please choose whether this coupon is visible to customers.',
+  })
+  @IsOptional()
+  @Transform(({ value }) => value === 'true' || value === true)
+  visibleToCustomers?: boolean = false;
 }

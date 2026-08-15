@@ -129,6 +129,10 @@ export class Coupon extends BaseEntity {
   @Column({ default: true })
   isActive: boolean;
 
+  /** When false, coupon still works if typed but does not appear in "my coupons" / offers list. */
+  @Column({ default: false })
+  visibleToCustomers: boolean;
+
   @Column({ nullable: true })
   createdBy: string;
 }

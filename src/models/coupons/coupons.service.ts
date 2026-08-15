@@ -103,6 +103,7 @@ export class CouponsService {
       minimumOrderAmount: createCouponDto.minimumOrderAmount,
       maximumDiscountAmount: createCouponDto.maximumDiscountAmount,
       isActive: createCouponDto.isActive ?? true,
+      visibleToCustomers: createCouponDto.visibleToCustomers ?? false,
       createdBy: adminId,
       validFrom: createCouponDto.validFrom
         ? new Date(createCouponDto.validFrom)
@@ -230,6 +231,7 @@ export class CouponsService {
       where: {
         eligibilityType: CouponEligibilityType.PUBLIC,
         isActive: true,
+        visibleToCustomers: true,
       },
       relations: this.couponRelations,
     });
@@ -238,6 +240,7 @@ export class CouponsService {
       where: {
         eligibilityType: CouponEligibilityType.USER_ROLE,
         isActive: true,
+        visibleToCustomers: true,
       },
       relations: this.couponRelations,
     });
@@ -255,6 +258,7 @@ export class CouponsService {
         type: CouponEligibilityType.SPECIFIC_USERS,
       })
       .andWhere('coupon.isActive = :isActive', { isActive: true })
+      .andWhere('coupon.visibleToCustomers = :visible', { visible: true })
       .andWhere('user.id = :userId', { userId })
       .getMany();
 
@@ -535,13 +539,11 @@ export class CouponsService {
     }
 
     if (coupon.type === CouponType.BOGO && calc.freeUnits === 0) {
-      const need =
-        (Number(coupon.bogoBuyQuantity) || 0) +
-        (Number(coupon.bogoGetQuantity) || 0);
+      const need = Number(coupon.bogoBuyQuantity) || 1;
       return {
         isValid: false,
         coupon,
-        message: `Add at least ${need} qualifying items to use this buy-get offer.`,
+        message: `Add at least ${need} qualifying item${need === 1 ? '' : 's'} to use this buy-get offer.`,
         scopeLabel,
         eligibleLineCount: calc.eligibleLineCount,
         totalLineCount: calc.totalLineCount,

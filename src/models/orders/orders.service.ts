@@ -24,6 +24,7 @@ import { EmailService } from 'src/providers/email/email.service';
 import { AdminEmailEntity } from '../emails/entities/admin-email.entity';
 import { CouponsService } from '../coupons/coupons.service';
 import { PricedLine } from '../coupons/coupon-discount.calculator';
+import { CouponType } from '../coupons/entities/coupon.entity';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import * as PDFDocument from 'pdfkit';
 import { PassThrough } from 'stream';
@@ -1257,10 +1258,9 @@ export class OrdersService {
       throw new BadRequestException('Your cart is empty.');
     }
 
-    const { subtotalCents, lines } = await this.priceCartItems(
-      quoteDto.items,
-      user,
-    );
+    const priced = await this.priceCartItems(quoteDto.items, user);
+    let subtotalCents = priced.subtotalCents;
+    const lines = priced.lines;
 
     let shippingCostCents = this.calculateShippingCents(subtotalCents);
     if (quoteDto.shippingAddress?.city === 'Store Collection') {
@@ -1316,6 +1316,14 @@ export class OrdersService {
         discountDescription = this.couponsService.getDiscountDescription(
           couponValidation.coupon,
         );
+
+        // BOGO free units are ADDITIONAL: include their value in subtotal, then discount it back
+        if (
+          couponValidation.coupon?.type === CouponType.BOGO &&
+          discountCents > 0
+        ) {
+          subtotalCents += discountCents;
+        }
       } else if (couponValidation.coupon) {
         couponPayload = couponValidation.coupon;
         discountDescription = this.couponsService.getDiscountDescription(
@@ -1323,6 +1331,11 @@ export class OrdersService {
         );
       }
     }
+
+    const matchedPaidUnits = lines.reduce((sum, line, i) => {
+      const free = lineDiscounts[i]?.freeUnits || 0;
+      return free > 0 ? sum + line.quantity : sum;
+    }, 0);
 
     const totalCents = Math.max(
       0,
@@ -1342,11 +1355,13 @@ export class OrdersService {
       eligibleLineCount,
       totalLineCount: lines.length,
       freeUnits,
-      lineDiscounts: lineDiscounts.map((ld) => ({
+      matchedPaidUnits,
+      lineDiscounts: lineDiscounts.map((ld, i) => ({
         productId: ld.productId,
         variantId: ld.variantId,
         discountAmount: Number(this.centsToMoneyString(ld.discountCents)),
         freeUnits: ld.freeUnits,
+        paidQuantity: lines[i]?.quantity ?? 0,
       })),
     };
   }
@@ -1363,10 +1378,9 @@ export class OrdersService {
     order.notes = createOrderDto.notes;
     order.paymentOrder = createOrderDto.paymentOrder;
 
-    const { orderItems, subtotalCents, lines } = await this.priceCartItems(
-      createOrderDto.items,
-      user,
-    );
+    const priced = await this.priceCartItems(createOrderDto.items, user);
+    let { orderItems, lines } = priced;
+    let subtotalCents = priced.subtotalCents;
 
     let shippingCostCents = this.calculateShippingCents(subtotalCents);
 
@@ -1406,6 +1420,27 @@ export class OrdersService {
       appliedCoupon = couponValidation.coupon;
       couponCode = createOrderDto.couponCode;
       lineDiscounts = couponValidation.lineDiscounts || [];
+
+      // BOGO: add free units onto the line and include their value in subtotal
+      if (appliedCoupon?.type === CouponType.BOGO && discountCents > 0) {
+        for (let i = 0; i < orderItems.length; i++) {
+          const ld = lineDiscounts[i];
+          const freeQty = ld?.freeUnits || 0;
+          if (freeQty <= 0) continue;
+
+          const paidQty = orderItems[i].quantity;
+          const unitPriceMills = this.parseScaledInt(
+            orderItems[i].price,
+            3,
+          );
+          const newQty = paidQty + freeQty;
+          orderItems[i].quantity = newQty;
+          orderItems[i].total = this.centsToMoneyString(
+            this.millsToCentsRounded(unitPriceMills * newQty),
+          );
+        }
+        subtotalCents += discountCents;
+      }
     }
 
     for (let i = 0; i < orderItems.length; i++) {

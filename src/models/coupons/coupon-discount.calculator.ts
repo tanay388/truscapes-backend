@@ -125,23 +125,24 @@ function calculateBogo(
     };
   }
 
-  type Unit = { lineIndex: number; unitPriceMills: number };
-  const units: Unit[] = [];
+  // True 1-for-1 style: every `buy` paid units on a line earn `get` ADDITIONAL free units
+  // of that same line (Buy 1 Get 1 with qty 1 → 1 free; qty 3 → 3 free).
+  type Allocation = { lineIndex: number; sets: number; freeUnits: number };
+  const allocations: Allocation[] = [];
+  let totalSets = 0;
+
   for (const i of eligibleIndexes) {
-    const line = lines[i];
-    for (let q = 0; q < line.quantity; q++) {
-      units.push({ lineIndex: i, unitPriceMills: line.unitPriceMills });
-    }
+    const sets = Math.floor(lines[i].quantity / buy);
+    if (sets <= 0) continue;
+    allocations.push({
+      lineIndex: i,
+      sets,
+      freeUnits: sets * get,
+    });
+    totalSets += sets;
   }
 
-  const setSize = buy + get;
-  let sets = Math.floor(units.length / setSize);
-  if (config.bogoMaxSetsPerOrder != null && config.bogoMaxSetsPerOrder > 0) {
-    sets = Math.min(sets, config.bogoMaxSetsPerOrder);
-  }
-
-  const freeCount = sets * get;
-  if (freeCount <= 0) {
+  if (totalSets <= 0) {
     return {
       discountCents: 0,
       lineDiscounts: result,
@@ -151,20 +152,41 @@ function calculateBogo(
     };
   }
 
-  units.sort((a, b) => a.unitPriceMills - b.unitPriceMills);
-  const discountedUnits = units.slice(0, freeCount);
+  const maxSets =
+    config.bogoMaxSetsPerOrder != null && config.bogoMaxSetsPerOrder > 0
+      ? config.bogoMaxSetsPerOrder
+      : null;
+
+  if (maxSets != null && totalSets > maxSets) {
+    let remaining = maxSets;
+    for (const alloc of allocations) {
+      const allowedSets = Math.min(alloc.sets, remaining);
+      alloc.sets = allowedSets;
+      alloc.freeUnits = allowedSets * get;
+      remaining -= allowedSets;
+    }
+  }
 
   let discountCents = 0;
-  for (const unit of discountedUnits) {
-    const unitDiscountMills = applyRatioRounded(
-      unit.unitPriceMills,
-      Math.round(getPercent),
-      100,
-    );
-    const unitDiscountCents = millsToCentsRounded(unitDiscountMills);
-    result[unit.lineIndex].discountCents += unitDiscountCents;
-    result[unit.lineIndex].freeUnits += getPercent >= 100 ? 1 : 0;
-    discountCents += unitDiscountCents;
+  let freeCount = 0;
+
+  for (const alloc of allocations) {
+    if (alloc.freeUnits <= 0) continue;
+    const line = lines[alloc.lineIndex];
+    let lineDiscountCents = 0;
+    for (let f = 0; f < alloc.freeUnits; f++) {
+      const unitDiscountMills = applyRatioRounded(
+        line.unitPriceMills,
+        Math.round(getPercent),
+        100,
+      );
+      lineDiscountCents += millsToCentsRounded(unitDiscountMills);
+    }
+    result[alloc.lineIndex].discountCents = lineDiscountCents;
+    result[alloc.lineIndex].freeUnits =
+      getPercent >= 100 ? alloc.freeUnits : 0;
+    discountCents += lineDiscountCents;
+    freeCount += alloc.freeUnits;
   }
 
   if (
