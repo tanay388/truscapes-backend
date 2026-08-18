@@ -45,6 +45,9 @@ export class Product extends BaseClassEntity {
   @Column({ type: 'integer', default: 12 })
   caseSize: number;
 
+  @Column({ type: 'boolean', default: false })
+  isPairProduct: boolean;
+
   @Column({ type: 'integer', default: 0 })
   categoryIndex: number;
 

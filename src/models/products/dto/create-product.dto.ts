@@ -119,4 +119,13 @@ export class CreateProductDto {
   @IsBoolean()
   @IsOptional()
   allowCaseOrder?: boolean;
+
+  @ApiPropertyOptional({
+    description: 'When true, quantity is sold in pairs (1 sale unit = 2 bulbs)',
+    default: false,
+  })
+  @IsBoolean()
+  @IsOptional()
+  @Transform(({ value }) => value === 'true' || value === true)
+  isPairProduct?: boolean;
 }

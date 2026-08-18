@@ -391,7 +391,7 @@ export class ProductsService {
     const includeOutOfStock = Boolean(search.includeOutOfStock);
 
     const cacheKey = [
-      'products:list:v2',
+      'products:list:v3',
       this.productReadCacheGen,
       includePrices ? 'p' : 'np',
       state,
@@ -461,6 +461,7 @@ export class ProductsService {
         p."basePrice"::text AS "basePrice",
         p."caseSize" AS "caseSize",
         p."allowCaseOrder" AS "allowCaseOrder",
+        p."isPairProduct" AS "isPairProduct",
         p."categoryId" AS "categoryId",
         p."createdAt" AS "createdAt",
         p."updateAt" AS "updateAt",
@@ -556,6 +557,7 @@ export class ProductsService {
         images: this.parseImages(row.images),
         caseSize: Number(row.caseSize || 12),
         allowCaseOrder: Boolean(row.allowCaseOrder),
+        isPairProduct: Boolean(row.isPairProduct),
         categoryId: Number(row.categoryId),
         createdAt: row.createdAt,
         updateAt: row.updateAt,
@@ -579,7 +581,7 @@ export class ProductsService {
   }
 
   async findOne(id: number, includePrices = false) {
-    const cacheKey = `products:detail:v2:${this.productReadCacheGen}:${id}:${includePrices ? 'p' : 'np'}`;
+    const cacheKey = `products:detail:v3:${this.productReadCacheGen}:${id}:${includePrices ? 'p' : 'np'}`;
 
     const cached = await this.cacheManager.get<any>(cacheKey);
     if (cached) {
@@ -627,6 +629,7 @@ export class ProductsService {
         p."basePrice"::text AS "basePrice",
         p."caseSize" AS "caseSize",
         p."allowCaseOrder" AS "allowCaseOrder",
+        p."isPairProduct" AS "isPairProduct",
         p."categoryId" AS "categoryId",
         p."createdAt" AS "createdAt",
         p."updateAt" AS "updateAt",
@@ -711,6 +714,7 @@ export class ProductsService {
       images: this.parseImages(row.images),
       caseSize: Number(row.caseSize || 12),
       allowCaseOrder: Boolean(row.allowCaseOrder),
+      isPairProduct: Boolean(row.isPairProduct),
       categoryId: Number(row.categoryId),
       createdAt: row.createdAt,
       updateAt: row.updateAt,
@@ -774,6 +778,7 @@ export class ProductsService {
       state: finalState,
       caseSize: updateProductDto.caseSize,
       allowCaseOrder: updateProductDto.allowCaseOrder,
+      isPairProduct: updateProductDto.isPairProduct,
       category: { id: updateProductDto.categoryId },
     });
 
