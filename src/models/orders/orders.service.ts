@@ -1172,7 +1172,12 @@ export class OrdersService {
   }
 
   private async priceCartItems(
-    items: { productId: number; variantId?: number; quantity: number }[],
+    items: {
+      productId: number;
+      variantId?: number;
+      quantity: number;
+      isCaseOrder?: boolean;
+    }[],
     user: User,
   ): Promise<{
     orderItems: OrderItem[];
@@ -1213,11 +1218,15 @@ export class OrdersService {
       const basePrice = this.getRoleBasedPrice(product, variant, user);
       let unitPriceMills = this.parseScaledInt(basePrice, 3);
 
+      // Only apply the case discount when the customer chose "order by case".
+      // Never infer from quantity % caseSize — buying 12 singles is not a case.
       const caseSize = Number(product.caseSize);
+      const isCaseOrder = Boolean(item.isCaseOrder);
       if (
+        isCaseOrder &&
+        product.allowCaseOrder &&
         Number.isFinite(caseSize) &&
         caseSize > 0 &&
-        product.allowCaseOrder &&
         quantity % caseSize === 0
       ) {
         unitPriceMills = this.applyRatioRounded(unitPriceMills, 95, 100);

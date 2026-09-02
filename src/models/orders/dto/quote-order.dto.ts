@@ -7,6 +7,7 @@ import {
   ValidateNested,
   IsNumber,
   IsObject,
+  IsBoolean,
 } from 'class-validator';
 
 class QuoteItemDto {
@@ -22,6 +23,14 @@ class QuoteItemDto {
   @ApiProperty()
   @IsNumber({}, { message: 'Please enter a valid quantity.' })
   quantity: number;
+
+  @ApiPropertyOptional({
+    description:
+      'True when the customer explicitly ordered by case (5% case discount). Do not infer from quantity alone.',
+  })
+  @IsBoolean()
+  @IsOptional()
+  isCaseOrder?: boolean;
 }
 
 class QuoteShippingAddressDto {

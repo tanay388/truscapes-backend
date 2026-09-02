@@ -2,6 +2,7 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
   IsArray,
+  IsBoolean,
   IsEnum,
   IsNotEmpty,
   IsNumber,
@@ -19,11 +20,20 @@ class OrderItemDto {
 
   @ApiProperty({ description: 'Product variant ID', required: false })
   @IsNumber()
+  @IsOptional()
   variantId?: number;
 
   @ApiProperty({ description: 'Quantity of the product' })
   @IsNumber()
   quantity: number;
+
+  @ApiPropertyOptional({
+    description:
+      'True when the customer explicitly ordered by case (5% case discount). Do not infer from quantity alone.',
+  })
+  @IsBoolean()
+  @IsOptional()
+  isCaseOrder?: boolean;
 }
 
 class CardInfo {
