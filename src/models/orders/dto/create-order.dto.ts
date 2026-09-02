@@ -1,9 +1,10 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import {
   IsArray,
   IsBoolean,
   IsEnum,
+  IsIn,
   IsNotEmpty,
   IsNumber,
   IsObject,
@@ -29,11 +30,17 @@ class OrderItemDto {
 
   @ApiPropertyOptional({
     description:
-      'True when the customer explicitly ordered by case (5% case discount). Do not infer from quantity alone.',
+      'True when the customer explicitly ordered by case (5% case discount).',
   })
+  @Transform(({ value }) => value === true || value === 'true' || value === 1)
   @IsBoolean()
   @IsOptional()
   isCaseOrder?: boolean;
+
+  @ApiPropertyOptional({ enum: ['SINGLE', 'CASE'] })
+  @IsOptional()
+  @IsIn(['SINGLE', 'CASE'])
+  quantityType?: 'SINGLE' | 'CASE';
 }
 
 class CardInfo {

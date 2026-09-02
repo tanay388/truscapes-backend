@@ -25,6 +25,12 @@ import { AdminEmailEntity } from '../emails/entities/admin-email.entity';
 import { CouponsService } from '../coupons/coupons.service';
 import { PricedLine } from '../coupons/coupon-discount.calculator';
 import { CouponType } from '../coupons/entities/coupon.entity';
+import {
+  applyRatioRounded,
+  millsToCentsRounded,
+  parseScaledInt,
+  priceBillableLine,
+} from './cart-pricing.calculator';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import * as PDFDocument from 'pdfkit';
 import { PassThrough } from 'stream';
@@ -1090,27 +1096,11 @@ export class OrdersService {
   };
 
   private parseScaledInt(value: string | number, scale: number): number {
-    const str = String(value).trim();
-    if (!/^-?\d+(\.\d+)?$/.test(str)) {
-      throw new BadRequestException(`Invalid money value: ${str}`);
+    try {
+      return parseScaledInt(value, scale);
+    } catch {
+      throw new BadRequestException(`Invalid money value: ${value}`);
     }
-
-    const negative = str.startsWith('-');
-    const unsigned = negative ? str.slice(1) : str;
-    const [intPart, fracPartRaw = ''] = unsigned.split('.');
-    const fracPart = fracPartRaw.replace(/[^0-9]/g, '');
-
-    const base = 10 ** scale;
-    const roundedDigits = fracPart.padEnd(scale + 1, '0');
-    const keep = roundedDigits.slice(0, scale);
-    const nextDigit = Number(roundedDigits.charAt(scale) || '0');
-
-    let scaled = Number(intPart) * base + (keep.length ? Number(keep) : 0);
-    if (nextDigit >= 5) {
-      scaled += 1;
-    }
-
-    return negative ? -scaled : scaled;
   }
 
   private applyRatioRounded(
@@ -1118,13 +1108,7 @@ export class OrdersService {
     numerator: number,
     denominator: number,
   ) {
-    const negative = value < 0;
-    const abs = Math.abs(value);
-    const scaled = abs * numerator;
-    const rounded = Math.floor(
-      (scaled + Math.floor(denominator / 2)) / denominator,
-    );
-    return negative ? -rounded : rounded;
+    return applyRatioRounded(value, numerator, denominator);
   }
 
   private millsToMoneyString(mills: number) {
@@ -1136,10 +1120,7 @@ export class OrdersService {
   }
 
   private millsToCentsRounded(mills: number) {
-    const negative = mills < 0;
-    const abs = Math.abs(mills);
-    const cents = Math.floor((abs + 5) / 10);
-    return negative ? -cents : cents;
+    return millsToCentsRounded(mills);
   }
 
   private calculateShippingCents(subtotalCents: number) {
@@ -1177,6 +1158,7 @@ export class OrdersService {
       variantId?: number;
       quantity: number;
       isCaseOrder?: boolean;
+      quantityType?: string;
     }[],
     user: User,
   ): Promise<{
@@ -1216,41 +1198,33 @@ export class OrdersService {
       }
 
       const basePrice = this.getRoleBasedPrice(product, variant, user);
-      let unitPriceMills = this.parseScaledInt(basePrice, 3);
+      const isCaseOrder =
+        item.isCaseOrder === true ||
+        String(item.quantityType || '').toUpperCase() === 'CASE';
 
-      // Only apply the case discount when the customer chose "order by case".
-      // Never infer from quantity % caseSize — buying 12 singles is not a case.
-      const caseSize = Number(product.caseSize);
-      const isCaseOrder = Boolean(item.isCaseOrder);
-      if (
-        isCaseOrder &&
-        product.allowCaseOrder &&
-        Number.isFinite(caseSize) &&
-        caseSize > 0 &&
-        quantity % caseSize === 0
-      ) {
-        unitPriceMills = this.applyRatioRounded(unitPriceMills, 95, 100);
-      }
-
-      const lineTotalCents = this.millsToCentsRounded(
-        unitPriceMills * quantity,
-      );
+      const priced = priceBillableLine({
+        baseUnitPrice: basePrice,
+        billableQuantity: quantity,
+        isCaseOrder,
+        caseSize: Number(product.caseSize) || 1,
+        allowCaseOrder: Boolean(product.allowCaseOrder),
+      });
 
       const orderItem = new OrderItem();
       orderItem.product = product;
       orderItem.variant = variant;
       orderItem.quantity = quantity;
-      orderItem.price = this.millsToMoneyString(unitPriceMills);
-      orderItem.total = this.centsToMoneyString(lineTotalCents);
+      orderItem.price = this.millsToMoneyString(priced.unitPriceMills);
+      orderItem.total = this.centsToMoneyString(priced.lineTotalCents);
       orderItem.discountAmount = '0.00';
       orderItems.push(orderItem);
-      subtotalCents += lineTotalCents;
+      subtotalCents += priced.lineTotalCents;
       lines.push({
         productId: Number(product.id),
         variantId: variant ? Number(variant.id) : null,
-        unitPriceMills,
+        unitPriceMills: priced.unitPriceMills,
         quantity,
-        lineTotalCents,
+        lineTotalCents: priced.lineTotalCents,
       });
     }
 
@@ -1371,6 +1345,12 @@ export class OrdersService {
         discountAmount: Number(this.centsToMoneyString(ld.discountCents)),
         freeUnits: ld.freeUnits,
         paidQuantity: lines[i]?.quantity ?? 0,
+        lineTotal: Number(
+          this.centsToMoneyString(lines[i]?.lineTotalCents ?? 0),
+        ),
+        unitPrice: Number(
+          this.millsToMoneyString(lines[i]?.unitPriceMills ?? 0),
+        ),
       })),
     };
   }
