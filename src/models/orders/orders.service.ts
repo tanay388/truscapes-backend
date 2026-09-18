@@ -30,6 +30,7 @@ import {
   millsToCentsRounded,
   parseScaledInt,
   priceBillableLine,
+  resolveIsCaseOrder,
 } from './cart-pricing.calculator';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import * as PDFDocument from 'pdfkit';
@@ -1209,9 +1210,13 @@ export class OrdersService {
       }
 
       const basePrice = this.getRoleBasedPrice(product, variant, user);
-      const isCaseOrder =
-        item.isCaseOrder === true ||
-        String(item.quantityType || '').toUpperCase() === 'CASE';
+      const isCaseOrder = resolveIsCaseOrder({
+        isCaseOrder: item.isCaseOrder,
+        quantityType: item.quantityType,
+        billableQuantity: quantity,
+        caseSize: Number(product.caseSize) || 1,
+        allowCaseOrder: Boolean(product.allowCaseOrder),
+      });
 
       const priced = priceBillableLine({
         baseUnitPrice: basePrice,

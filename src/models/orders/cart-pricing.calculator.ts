@@ -151,6 +151,41 @@ export function shouldApplyCaseDiscount(input: {
   );
 }
 
+/**
+ * Whether an API line (quote/create) is a case order.
+ *
+ * Current web clients always send `quantityType` and `isCaseOrder`, and only
+ * an explicit CASE gets the case discount. Browser tabs still running the web
+ * app from before 2026-09-02 send neither flag (case lines arrive as plain unit
+ * counts). For those legacy requests keep the old rule — a whole number of
+ * cases of a case-orderable product is a case — so they aren't overcharged.
+ */
+export function resolveIsCaseOrder(input: {
+  isCaseOrder?: boolean | null;
+  quantityType?: string | null;
+  billableQuantity: number;
+  caseSize: number;
+  allowCaseOrder: boolean;
+}): boolean {
+  const quantityType = String(input.quantityType ?? '').toUpperCase();
+  if (input.isCaseOrder === true || quantityType === 'CASE') {
+    return true;
+  }
+
+  const isLegacyClient = input.isCaseOrder == null && quantityType === '';
+  if (!isLegacyClient) {
+    return false;
+  }
+
+  const caseSize = Number(input.caseSize);
+  return (
+    Boolean(input.allowCaseOrder) &&
+    Number.isFinite(caseSize) &&
+    caseSize > 1 &&
+    input.billableQuantity % caseSize === 0
+  );
+}
+
 /** Price one cart line the same way quote/checkout must. */
 export function priceCartLine(input: CartPricingInput): CartPricingResult {
   const billableQuantity = resolveBillableQuantity({

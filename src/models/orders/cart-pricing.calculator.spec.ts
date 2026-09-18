@@ -3,6 +3,7 @@ import {
   priceBillableLine,
   toOrderItemPayload,
   resolveBillableQuantity,
+  resolveIsCaseOrder,
   shouldApplyCaseDiscount,
 } from './cart-pricing.calculator';
 
@@ -379,6 +380,98 @@ describe('cart-pricing.calculator', () => {
       expect(result.caseDiscountApplied).toBe(false);
       expect(result.caseDiscountPercent).toBe(0);
       expect(result.lineTotal).toBe(100);
+    });
+  });
+
+  describe('resolveIsCaseOrder — current vs legacy (pre-2026-09-02) clients', () => {
+    const product = { caseSize: 12, allowCaseOrder: true };
+
+    it('explicit CASE is a case order', () => {
+      expect(
+        resolveIsCaseOrder({
+          ...product,
+          isCaseOrder: true,
+          quantityType: 'CASE',
+          billableQuantity: 12,
+        }),
+      ).toBe(true);
+    });
+
+    it('explicit SINGLE is never a case, even for a whole case of units', () => {
+      expect(
+        resolveIsCaseOrder({
+          ...product,
+          isCaseOrder: false,
+          quantityType: 'SINGLE',
+          billableQuantity: 12,
+        }),
+      ).toBe(false);
+    });
+
+    it('Sep-2 client (isCaseOrder only) is taken at its word', () => {
+      expect(
+        resolveIsCaseOrder({
+          ...product,
+          isCaseOrder: false,
+          billableQuantity: 12,
+        }),
+      ).toBe(false);
+      expect(
+        resolveIsCaseOrder({
+          ...product,
+          isCaseOrder: true,
+          billableQuantity: 12,
+        }),
+      ).toBe(true);
+    });
+
+    it('legacy client (no flags): whole cases are case orders', () => {
+      expect(resolveIsCaseOrder({ ...product, billableQuantity: 12 })).toBe(
+        true,
+      );
+      expect(resolveIsCaseOrder({ ...product, billableQuantity: 24 })).toBe(
+        true,
+      );
+    });
+
+    it('legacy client (no flags): partial cases are singles', () => {
+      expect(resolveIsCaseOrder({ ...product, billableQuantity: 4 })).toBe(
+        false,
+      );
+    });
+
+    it('legacy client (no flags): no case when case orders are off or caseSize 1', () => {
+      expect(
+        resolveIsCaseOrder({
+          caseSize: 12,
+          allowCaseOrder: false,
+          billableQuantity: 12,
+        }),
+      ).toBe(false);
+      expect(
+        resolveIsCaseOrder({
+          caseSize: 1,
+          allowCaseOrder: true,
+          billableQuantity: 12,
+        }),
+      ).toBe(false);
+    });
+
+    it('order 5037 regression: legacy 12 × TS-B102 @ $55 gets 5% ($627.00)', () => {
+      const lines = [12, 4].map((billableQuantity) =>
+        priceBillableLine({
+          baseUnitPrice: '55.00',
+          billableQuantity,
+          isCaseOrder: resolveIsCaseOrder({ ...product, billableQuantity }),
+          caseSize: 12,
+          allowCaseOrder: true,
+          caseDiscountPercent: '5.00',
+        }),
+      );
+      expect(lines[0].lineTotal).toBe(627);
+      expect(lines[0].caseDiscountApplied).toBe(true);
+      expect(lines[1].lineTotal).toBe(220);
+      expect(lines[1].caseDiscountApplied).toBe(false);
     });
   });
 
