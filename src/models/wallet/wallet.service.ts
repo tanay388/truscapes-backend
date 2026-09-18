@@ -170,7 +170,6 @@ export class WalletService {
     }
 
     const wallet = await this.findOne(userId);
-    const user = await User.findOneBy({ id: userId });
     if (!wallet) {
       throw new NotFoundException('User wallet not found');
     }
@@ -199,11 +198,8 @@ export class WalletService {
       );
     }
 
-    this.emailService.sendWalletBalanceUpdateEmail(
-      user.email,
-      user.name,
-      newBalance,
-    );
+    // Customers are not emailed for admin wallet balance changes (credit or
+    // debit); the change is visible in their transaction history.
 
     return {
       ...wallet,
