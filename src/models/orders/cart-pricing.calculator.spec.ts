@@ -59,6 +59,7 @@ describe('cart-pricing.calculator', () => {
         shouldApplyCaseDiscount({
           quantityType: 'CASE',
           allowCaseOrder: true,
+          caseDiscountPercent: 5,
           caseSize: 12,
           billableQuantity: 12,
         }),
@@ -70,6 +71,7 @@ describe('cart-pricing.calculator', () => {
         shouldApplyCaseDiscount({
           quantityType: 'SINGLE',
           allowCaseOrder: true,
+          caseDiscountPercent: 5,
           caseSize: 12,
           billableQuantity: 12,
         }),
@@ -81,6 +83,7 @@ describe('cart-pricing.calculator', () => {
         shouldApplyCaseDiscount({
           quantityType: 'CASE',
           allowCaseOrder: true,
+          caseDiscountPercent: 5,
           caseSize: 1,
           billableQuantity: 1,
         }),
@@ -92,6 +95,7 @@ describe('cart-pricing.calculator', () => {
         shouldApplyCaseDiscount({
           quantityType: 'CASE',
           allowCaseOrder: false,
+          caseDiscountPercent: 5,
           caseSize: 12,
           billableQuantity: 12,
         }),
@@ -107,6 +111,7 @@ describe('cart-pricing.calculator', () => {
         quantityType: 'CASE',
         caseSize: 12,
         allowCaseOrder: true,
+        caseDiscountPercent: 5,
         isPairProduct: false,
       });
 
@@ -124,6 +129,7 @@ describe('cart-pricing.calculator', () => {
         quantityType: 'SINGLE',
         caseSize: 1,
         allowCaseOrder: true,
+        caseDiscountPercent: 5,
         isPairProduct: false,
       });
 
@@ -141,6 +147,7 @@ describe('cart-pricing.calculator', () => {
         quantityType: 'SINGLE',
         caseSize: 12,
         allowCaseOrder: true,
+        caseDiscountPercent: 5,
         isPairProduct: false,
       });
 
@@ -157,6 +164,7 @@ describe('cart-pricing.calculator', () => {
         quantityType: 'CASE',
         caseSize: 12,
         allowCaseOrder: true,
+        caseDiscountPercent: 5,
         isPairProduct: false,
       });
       const fromApi = priceBillableLine({
@@ -165,6 +173,7 @@ describe('cart-pricing.calculator', () => {
         isCaseOrder: true,
         caseSize: 12,
         allowCaseOrder: true,
+        caseDiscountPercent: 5,
       });
       expect(fromApi).toMatchObject({
         unitPriceMills: fromCart.unitPriceMills,
@@ -180,6 +189,7 @@ describe('cart-pricing.calculator', () => {
         isCaseOrder: false,
         caseSize: 12,
         allowCaseOrder: true,
+        caseDiscountPercent: 5,
       });
       expect(fromApi.caseDiscountApplied).toBe(false);
       expect(fromApi.lineTotal).toBe(234);
@@ -194,6 +204,7 @@ describe('cart-pricing.calculator', () => {
         quantityType: 'SINGLE',
         caseSize: 12,
         allowCaseOrder: true,
+        caseDiscountPercent: 5,
         isPairProduct: false,
       });
       expect(result.lineTotal).toBe(170);
@@ -207,6 +218,7 @@ describe('cart-pricing.calculator', () => {
         quantityType: 'SINGLE',
         caseSize: 12,
         allowCaseOrder: true,
+        caseDiscountPercent: 5,
         isPairProduct: true,
       });
       expect(result.billableQuantity).toBe(2);
@@ -221,6 +233,7 @@ describe('cart-pricing.calculator', () => {
         quantityType: 'CASE',
         caseSize: 10,
         allowCaseOrder: true,
+        caseDiscountPercent: 5,
         isPairProduct: false,
       });
       expect(result.billableQuantity).toBe(20);
@@ -236,6 +249,7 @@ describe('cart-pricing.calculator', () => {
           quantityType: 'SINGLE',
           caseSize: 1,
           allowCaseOrder: true,
+          caseDiscountPercent: 5,
           isPairProduct: false,
         }),
         priceCartLine({
@@ -244,6 +258,7 @@ describe('cart-pricing.calculator', () => {
           quantityType: 'CASE',
           caseSize: 12,
           allowCaseOrder: true,
+          caseDiscountPercent: 5,
           isPairProduct: false,
         }),
         priceCartLine({
@@ -252,6 +267,7 @@ describe('cart-pricing.calculator', () => {
           quantityType: 'SINGLE',
           caseSize: 1,
           allowCaseOrder: true,
+          caseDiscountPercent: 5,
           isPairProduct: false,
         }),
         priceCartLine({
@@ -260,6 +276,7 @@ describe('cart-pricing.calculator', () => {
           quantityType: 'SINGLE',
           caseSize: 12,
           allowCaseOrder: true,
+          caseDiscountPercent: 5,
           isPairProduct: false,
         }),
         priceCartLine({
@@ -268,6 +285,7 @@ describe('cart-pricing.calculator', () => {
           quantityType: 'SINGLE',
           caseSize: 12,
           allowCaseOrder: true,
+          caseDiscountPercent: 5,
           isPairProduct: false,
         }),
       ];
@@ -277,6 +295,90 @@ describe('cart-pricing.calculator', () => {
       expect(subtotalCents).toBe(138466);
       expect(lines[1].caseDiscountApplied).toBe(true);
       expect(lines[2].caseDiscountApplied).toBe(false);
+    });
+  });
+
+  describe('per-product case discount percent', () => {
+    const caseOf10 = (caseDiscountPercent: string | number) =>
+      priceCartLine({
+        baseUnitPrice: '10',
+        chosenQuantity: 1,
+        quantityType: 'CASE',
+        caseSize: 10,
+        allowCaseOrder: true,
+        caseDiscountPercent,
+        isPairProduct: false,
+      });
+
+    it('5% on a case of 10 × $10 is $95', () => {
+      const result = caseOf10(5);
+      expect(result.lineTotal).toBe(95);
+      expect(result.caseDiscountPercent).toBe(5);
+    });
+
+    it('25% on a case of 10 × $10 is $75', () => {
+      const result = caseOf10(25);
+      expect(result.caseDiscountApplied).toBe(true);
+      expect(result.unitPrice).toBe(7.5);
+      expect(result.lineTotal).toBe(75);
+      expect(result.caseDiscountPercent).toBe(25);
+    });
+
+    it('accepts decimal strings from the DB (numeric column)', () => {
+      const result = caseOf10('7.50');
+      expect(result.unitPriceMills).toBe(9250);
+      expect(result.lineTotal).toBe(92.5);
+      expect(result.caseDiscountPercent).toBe(7.5);
+    });
+
+    it('0% means no case discount', () => {
+      const result = caseOf10(0);
+      expect(result.caseDiscountApplied).toBe(false);
+      expect(result.caseDiscountPercent).toBe(0);
+      expect(result.lineTotal).toBe(100);
+    });
+
+    it('5% matches the previous hardcoded 95/100 rounding', () => {
+      const result = priceCartLine({
+        baseUnitPrice: '149.99',
+        chosenQuantity: 1,
+        quantityType: 'CASE',
+        caseSize: 12,
+        allowCaseOrder: true,
+        caseDiscountPercent: '5.00',
+        isPairProduct: false,
+      });
+      expect(result.unitPriceMills).toBe(142491);
+      expect(result.lineTotal).toBe(1709.89);
+    });
+
+    it('rounds half-up in mills for odd percents', () => {
+      const result = priceBillableLine({
+        baseUnitPrice: '52.25',
+        billableQuantity: 12,
+        isCaseOrder: true,
+        caseSize: 12,
+        allowCaseOrder: true,
+        caseDiscountPercent: 12.5,
+      });
+      // 52250 × 0.875 = 45718.75 → 45719 mills
+      expect(result.unitPriceMills).toBe(45719);
+      expect(result.baseUnitPriceMills).toBe(52250);
+      expect(result.lineTotal).toBe(548.63);
+    });
+
+    it('SINGLE never gets the product percent', () => {
+      const result = priceBillableLine({
+        baseUnitPrice: '10',
+        billableQuantity: 10,
+        isCaseOrder: false,
+        caseSize: 10,
+        allowCaseOrder: true,
+        caseDiscountPercent: 25,
+      });
+      expect(result.caseDiscountApplied).toBe(false);
+      expect(result.caseDiscountPercent).toBe(0);
+      expect(result.lineTotal).toBe(100);
     });
   });
 

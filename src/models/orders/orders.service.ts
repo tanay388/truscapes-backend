@@ -1165,10 +1165,21 @@ export class OrdersService {
     orderItems: OrderItem[];
     subtotalCents: number;
     lines: PricedLine[];
+    /** Per-line case discount info, index-aligned with `lines` */
+    caseLines: {
+      baseUnitPriceMills: number;
+      caseDiscountApplied: boolean;
+      caseDiscountPercent: number;
+    }[];
   }> {
     let subtotalCents = 0;
     const orderItems: OrderItem[] = [];
     const lines: PricedLine[] = [];
+    const caseLines: {
+      baseUnitPriceMills: number;
+      caseDiscountApplied: boolean;
+      caseDiscountPercent: number;
+    }[] = [];
 
     for (const item of items) {
       const product = await Product.findOne({
@@ -1208,6 +1219,7 @@ export class OrdersService {
         isCaseOrder,
         caseSize: Number(product.caseSize) || 1,
         allowCaseOrder: Boolean(product.allowCaseOrder),
+        caseDiscountPercent: product.caseDiscountPercent ?? 0,
       });
 
       const orderItem = new OrderItem();
@@ -1226,9 +1238,14 @@ export class OrdersService {
         quantity,
         lineTotalCents: priced.lineTotalCents,
       });
+      caseLines.push({
+        baseUnitPriceMills: priced.baseUnitPriceMills,
+        caseDiscountApplied: priced.caseDiscountApplied,
+        caseDiscountPercent: priced.caseDiscountPercent,
+      });
     }
 
-    return { orderItems, subtotalCents, lines };
+    return { orderItems, subtotalCents, lines, caseLines };
   }
 
   async quoteOrder(quoteDto: QuoteOrderDto, userId: string) {
@@ -1244,6 +1261,7 @@ export class OrdersService {
     const priced = await this.priceCartItems(quoteDto.items, user);
     let subtotalCents = priced.subtotalCents;
     const lines = priced.lines;
+    const caseLines = priced.caseLines;
 
     let shippingCostCents = this.calculateShippingCents(subtotalCents);
     if (quoteDto.shippingAddress?.city === 'Store Collection') {
@@ -1351,6 +1369,11 @@ export class OrdersService {
         unitPrice: Number(
           this.millsToMoneyString(lines[i]?.unitPriceMills ?? 0),
         ),
+        baseUnitPrice: Number(
+          this.millsToMoneyString(caseLines[i]?.baseUnitPriceMills ?? 0),
+        ),
+        caseDiscountApplied: Boolean(caseLines[i]?.caseDiscountApplied),
+        caseDiscountPercent: caseLines[i]?.caseDiscountPercent ?? 0,
       })),
     };
   }

@@ -45,6 +45,10 @@ export class Product extends BaseClassEntity {
   @Column({ type: 'integer', default: 12 })
   caseSize: number;
 
+  /** Percent off the unit price when ordered by the case (0–100, 2 decimals) */
+  @Column({ type: 'decimal', precision: 5, scale: 2, default: 5 })
+  caseDiscountPercent: number;
+
   @Column({ type: 'boolean', default: false })
   isPairProduct: boolean;
 

@@ -30,7 +30,7 @@ class OrderItemDto {
 
   @ApiPropertyOptional({
     description:
-      'True when the customer explicitly ordered by case (5% case discount).',
+      "True when the customer explicitly ordered by case (applies the product's case discount %).",
   })
   @Transform(({ value }) => value === true || value === 'true' || value === 1)
   @IsBoolean()

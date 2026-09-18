@@ -391,7 +391,7 @@ export class ProductsService {
     const includeOutOfStock = Boolean(search.includeOutOfStock);
 
     const cacheKey = [
-      'products:list:v3',
+      'products:list:v4',
       this.productReadCacheGen,
       includePrices ? 'p' : 'np',
       state,
@@ -460,6 +460,7 @@ export class ProductsService {
         p.images,
         p."basePrice"::text AS "basePrice",
         p."caseSize" AS "caseSize",
+        p."caseDiscountPercent"::text AS "caseDiscountPercent",
         p."allowCaseOrder" AS "allowCaseOrder",
         p."isPairProduct" AS "isPairProduct",
         p."categoryId" AS "categoryId",
@@ -556,6 +557,7 @@ export class ProductsService {
         shippingCost: row.shippingCost,
         images: this.parseImages(row.images),
         caseSize: Number(row.caseSize || 12),
+        caseDiscountPercent: Number(row.caseDiscountPercent ?? 5),
         allowCaseOrder: Boolean(row.allowCaseOrder),
         isPairProduct: Boolean(row.isPairProduct),
         categoryId: Number(row.categoryId),
@@ -581,7 +583,7 @@ export class ProductsService {
   }
 
   async findOne(id: number, includePrices = false) {
-    const cacheKey = `products:detail:v3:${this.productReadCacheGen}:${id}:${includePrices ? 'p' : 'np'}`;
+    const cacheKey = `products:detail:v4:${this.productReadCacheGen}:${id}:${includePrices ? 'p' : 'np'}`;
 
     const cached = await this.cacheManager.get<any>(cacheKey);
     if (cached) {
@@ -628,6 +630,7 @@ export class ProductsService {
         p.images,
         p."basePrice"::text AS "basePrice",
         p."caseSize" AS "caseSize",
+        p."caseDiscountPercent"::text AS "caseDiscountPercent",
         p."allowCaseOrder" AS "allowCaseOrder",
         p."isPairProduct" AS "isPairProduct",
         p."categoryId" AS "categoryId",
@@ -713,6 +716,7 @@ export class ProductsService {
       shippingCost: row.shippingCost,
       images: this.parseImages(row.images),
       caseSize: Number(row.caseSize || 12),
+      caseDiscountPercent: Number(row.caseDiscountPercent ?? 5),
       allowCaseOrder: Boolean(row.allowCaseOrder),
       isPairProduct: Boolean(row.isPairProduct),
       categoryId: Number(row.categoryId),
@@ -777,6 +781,7 @@ export class ProductsService {
       index: updateProductDto.index,
       state: finalState,
       caseSize: updateProductDto.caseSize,
+      caseDiscountPercent: updateProductDto.caseDiscountPercent,
       allowCaseOrder: updateProductDto.allowCaseOrder,
       isPairProduct: updateProductDto.isPairProduct,
       category: { id: updateProductDto.categoryId },

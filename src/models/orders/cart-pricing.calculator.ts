@@ -3,7 +3,8 @@
  * Keep in sync with ecommerce `src/utils/cartPricing.ts`.
  *
  * Rules:
- * - Case 5% only when explicitly CASE, allowCaseOrder, and caseSize > 1
+ * - Case discount (the product's caseDiscountPercent) only when explicitly
+ *   CASE, allowCaseOrder, caseSize > 1 and percent > 0
  * - Never infer case from quantity % caseSize
  * - Pair products: billable qty = chosen qty × 2 (not when CASE)
  */
@@ -18,6 +19,8 @@ export type CartPricingInput = {
   quantityType: CartQuantityType;
   caseSize: number;
   allowCaseOrder: boolean;
+  /** Product's case discount, 0–100 with up to 2 decimals */
+  caseDiscountPercent: string | number;
   /** Product is sold in pairs; ignored when quantityType is CASE */
   isPairProduct: boolean;
 };
@@ -29,6 +32,8 @@ export type CartPricingResult = {
   unitPrice: number;
   lineTotal: number;
   caseDiscountApplied: boolean;
+  /** Percent actually applied to this line (0 when no case discount) */
+  caseDiscountPercent: number;
 };
 
 export function parseScaledInt(value: string | number, scale: number): number {
@@ -110,11 +115,30 @@ export function resolveBillableQuantity(input: {
   return qty;
 }
 
+/** Case discount percent → basis points, clamped to 0–10000 (0%–100%). */
+export function caseDiscountBasisPoints(percent: string | number): number {
+  if (percent === null || percent === undefined || percent === '') {
+    return 0;
+  }
+  const bps = parseScaledInt(percent, 2);
+  return Math.min(Math.max(bps, 0), 10000);
+}
+
+/** Apply a case discount percent to a unit price in mills (half-up). */
+export function applyCaseDiscountMills(
+  unitPriceMills: number,
+  percent: string | number,
+): number {
+  const bps = caseDiscountBasisPoints(percent);
+  return applyRatioRounded(unitPriceMills, 10000 - bps, 10000);
+}
+
 export function shouldApplyCaseDiscount(input: {
   quantityType: CartQuantityType;
   allowCaseOrder: boolean;
   caseSize: number;
   billableQuantity: number;
+  caseDiscountPercent: string | number;
 }): boolean {
   const caseSize = Number(input.caseSize);
   return (
@@ -122,7 +146,8 @@ export function shouldApplyCaseDiscount(input: {
     Boolean(input.allowCaseOrder) &&
     Number.isFinite(caseSize) &&
     caseSize > 1 &&
-    input.billableQuantity % caseSize === 0
+    input.billableQuantity % caseSize === 0 &&
+    caseDiscountBasisPoints(input.caseDiscountPercent) > 0
   );
 }
 
@@ -141,10 +166,14 @@ export function priceCartLine(input: CartPricingInput): CartPricingResult {
     allowCaseOrder: input.allowCaseOrder,
     caseSize: input.caseSize,
     billableQuantity,
+    caseDiscountPercent: input.caseDiscountPercent,
   });
 
   if (caseDiscountApplied) {
-    unitPriceMills = applyRatioRounded(unitPriceMills, 95, 100);
+    unitPriceMills = applyCaseDiscountMills(
+      unitPriceMills,
+      input.caseDiscountPercent,
+    );
   }
 
   const lineTotalCents = millsToCentsRounded(unitPriceMills * billableQuantity);
@@ -156,6 +185,9 @@ export function priceCartLine(input: CartPricingInput): CartPricingResult {
     unitPrice: millsToMoney(unitPriceMills),
     lineTotal: centsToMoney(lineTotalCents),
     caseDiscountApplied,
+    caseDiscountPercent: caseDiscountApplied
+      ? caseDiscountBasisPoints(input.caseDiscountPercent) / 100
+      : 0,
   };
 }
 
@@ -166,38 +198,50 @@ export function priceBillableLine(input: {
   isCaseOrder: boolean;
   caseSize: number;
   allowCaseOrder: boolean;
+  caseDiscountPercent: string | number;
 }): {
+  baseUnitPriceMills: number;
   unitPriceMills: number;
   lineTotalCents: number;
   unitPrice: number;
   lineTotal: number;
   caseDiscountApplied: boolean;
+  caseDiscountPercent: number;
 } {
   const quantity = Number(input.billableQuantity);
   if (!Number.isFinite(quantity) || quantity <= 0) {
     throw new Error('Invalid quantity');
   }
 
-  let unitPriceMills = parseScaledInt(input.baseUnitPrice, 3);
+  const baseUnitPriceMills = parseScaledInt(input.baseUnitPrice, 3);
+  let unitPriceMills = baseUnitPriceMills;
   const caseDiscountApplied = shouldApplyCaseDiscount({
     quantityType: input.isCaseOrder ? 'CASE' : 'SINGLE',
     allowCaseOrder: input.allowCaseOrder,
     caseSize: input.caseSize,
     billableQuantity: quantity,
+    caseDiscountPercent: input.caseDiscountPercent,
   });
 
   if (caseDiscountApplied) {
-    unitPriceMills = applyRatioRounded(unitPriceMills, 95, 100);
+    unitPriceMills = applyCaseDiscountMills(
+      unitPriceMills,
+      input.caseDiscountPercent,
+    );
   }
 
   const lineTotalCents = millsToCentsRounded(unitPriceMills * quantity);
 
   return {
+    baseUnitPriceMills,
     unitPriceMills,
     lineTotalCents,
     unitPrice: millsToMoney(unitPriceMills),
     lineTotal: centsToMoney(lineTotalCents),
     caseDiscountApplied,
+    caseDiscountPercent: caseDiscountApplied
+      ? caseDiscountBasisPoints(input.caseDiscountPercent) / 100
+      : 0,
   };
 }
 

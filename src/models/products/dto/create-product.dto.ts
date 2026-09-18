@@ -7,6 +7,8 @@ import {
   IsNumber,
   IsUUID,
   ArrayMinSize,
+  Min,
+  Max,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
@@ -114,6 +116,26 @@ export class CreateProductDto {
   @IsOptional()
   @Transform(({ value }) => Number(value))
   caseSize?: number;
+
+  @ApiPropertyOptional({
+    description:
+      'Percent off the unit price when ordered by the case (0–100, up to 2 decimals)',
+    default: 5,
+    example: 5,
+  })
+  @IsNumber(
+    { maxDecimalPlaces: 2 },
+    { message: 'Case discount must be a number with at most 2 decimals' },
+  )
+  @Min(0)
+  @Max(100)
+  @IsOptional()
+  @Transform(({ value }) =>
+    value === '' || value === null || value === undefined
+      ? undefined
+      : Number(value),
+  )
+  caseDiscountPercent?: number;
 
   @ApiPropertyOptional()
   @IsBoolean()
